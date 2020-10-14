@@ -17,7 +17,7 @@ using namespace dronemap;
 #define BUFFER_LENGTH 8192
 
 static volatile sig_atomic_t run = 1;
-static SerialPort* port;
+static Serial_Port* port;
 static DimSocket* dim;
 static volatile bool autopilot_reading_state = false;
 
@@ -42,7 +42,7 @@ void gc_worker() {
 
     if (result > 0) {
       if(port){
-        port->send(recv_size, gc_buffer);
+        // port->write(recv_size, gc_buffer);
         printf("\r\nfrom qgc, %d\r\n", recv_size);
         //      for (uint16_t i = 0; i < recv_size ; i++) {
         //        printf("%02X ", gc_buffer[i]);
@@ -70,7 +70,7 @@ void fc_worker() {
   // mavlink_msg_heartbeat_encode(255, 190, &message, &heartbeat);
   // mavlink_msg_to_send_buffer((uint8_t*)fc_buffer, &message);
   // printf("\r\nPort send");
-  // port->send(sizeof(fc_buffer), fc_buffer);
+  // port->write(sizeof(fc_buffer), fc_buffer);
   // printf("\r\nPort send");
 
   while (!received) {
@@ -123,7 +123,8 @@ void* start_autopilot_read_thread(void *args)
     fc_worker();
     //    usleep(100000); // 10hz
     //    usleep(50000); // 20hz
-    usleep(10000); // 100hz
+    //    usleep(10000); // 100hz
+    usleep(1000); // 1000hz
   }
   return NULL;
 }
@@ -139,7 +140,9 @@ int main(int argc, const char *argv[])
   int result;
   pthread_t read_tid, write_tid;
 
-  port = new SerialPort("/dev/ttyACM0", 57600);
+  port = new Serial_Port("/dev/ttyACM0", 57600);
+  port->start();
+
   dim = new DimSocket(4433, true);
 
   result = pthread_create( &read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
