@@ -9,6 +9,8 @@
 #include <stdio.h>   // Standard input/output definitions
 #include <pthread.h> // This uses POSIX Threads
 
+#define SERVER_IP "192.168.88.26"
+
 namespace dronemap
 {
     class DimSocket
@@ -38,13 +40,14 @@ namespace dronemap
                 throw 1;
             }
 
-            open("192.168.88.16", port, bind);
+            open(SERVER_IP, port, bind);
         };
         ~DimSocket() {
             pthread_mutex_destroy(&lock);
             close();
         };
         void open(const char *ip, unsigned long port, bool bind = false);
+        int bind_();
         int listen();
         int connect();
         void disconnect();

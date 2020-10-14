@@ -63,7 +63,10 @@ void DimSocket::open(const char *ip, unsigned long port, bool bind) {
             throw std::runtime_error(strerror(errno));
         }
     } else {
-        listen();
+        if (bind_() == -1) {
+            close(); // TODO
+            throw std::runtime_error(strerror(errno));
+      }
     }
     return;
 }
@@ -74,10 +77,12 @@ void DimSocket::disconnect() {
     _connection_status = DISCONNECTED;
 }
 
-int DimSocket::listen() {
+int DimSocket::bind_() {
+    int result;
+
     // SOCKET OPEN
     if ( server_fd = ::socket(AF_INET, SOCK_STREAM, 0); server_fd == -1) {
-    // if ( server_fd = ::socket(AF_INET, SOCK_DGRAM, 0); server_fd == -1) {
+    //if ( server_fd = ::socket(AF_INET, SOCK_DGRAM, 0); server_fd == -1) { //udp
         throw std::runtime_error(strerror(errno));
     }
 
@@ -85,7 +90,6 @@ int DimSocket::listen() {
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(4433);
 
-    int result;
     // BIND
     result = ::bind(server_fd,
                     reinterpret_cast<struct sockaddr *>(&server_addr),
@@ -98,7 +102,11 @@ int DimSocket::listen() {
         close(); // TODO resolve Aborted (core dumped)
         throw std::runtime_error(strerror(errno));
     }
+    return result;
+}
 
+int DimSocket::listen() {
+    int result;
     // LISTEN AND ACCEPT
     result = ::listen(server_fd, 10);
 
@@ -161,12 +169,12 @@ int DimSocket::connect() {
 
     // SOCKET OPEN
     if ( _fd = ::socket(PF_INET, SOCK_STREAM, 0); _fd == -1) {
-    // if ( _fd = ::socket(PF_INET, SOCK_DGRAM, 0); _fd == -1) {
+      //if ( _fd = ::socket(PF_INET, SOCK_DGRAM, 0); _fd == -1) { // udp
         throw std::runtime_error(strerror(errno));
     }
 
     _addr.sin_family = AF_INET;
-    _addr.sin_addr.s_addr = inet_addr("192.168.88.16");
+    _addr.sin_addr.s_addr = inet_addr(SERVER_IP);
     _addr.sin_port = htons(4433);
 
     int result;
@@ -222,35 +230,33 @@ auto DimSocket::send(uint16_t size, uint8_t* data) -> int {
    }
    int result = -1;
 
-   // pthread_mutex_lock(&lock);
-
-   // if(size > 2048) {
-   //     result = _ksetlsTlsWrite(_fd, data, 2048);
-   //     if (result < 0) {
-   //         std::cout << "_ksetlsTlsWrite() : Fail " << result << std::endl;
-   //         // return -1;
-   //         close();
-   //         throw std::runtime_error(strerror(errno));
-   //     }
-   //     result = _ksetlsTlsWrite(_fd, data+2048, size-2048);
-   //     if (result < 0) {
-   //         std::cout << "_ksetlsTlsWrite() : Fail " << result << std::endl;
-   //         // return -1;
-   //         close();
-   //         throw std::runtime_error(strerror(errno));
-   //     }
-   //     return 0;
-   // }
-
+   pthread_mutex_lock(&lock);
+   if(size > 2048) {
+       result = _ksetlsTlsWrite(_fd, data, 2048);
+       if (result < 0) {
+           std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+           return -1;
+           //           close();
+           //           throw std::runtime_error(strerror(errno));
+       }
+       result = _ksetlsTlsWrite(_fd, data+2048, size-2048);
+       if (result < 0) {
+           std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+           return -1;
+           //           close();
+           //           throw std::runtime_error(strerror(errno));
+       }
+       return 0;
+   } else {
     result = _ksetlsTlsWrite(_fd, data, size);
-    // pthread_mutex_unlock(&lock);
-
     if (result < 0) {
         std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
-        // return -1;
-        close();
-        throw std::runtime_error(strerror(errno));
+        return -1;
+        //close();
+        //throw std::runtime_error(strerror(errno));
     }
+   }
+   pthread_mutex_unlock(&lock);
 
     return 0;
 }
@@ -263,15 +269,15 @@ auto DimSocket::recv(int16_t* size, uint8_t* data) -> int {
    }
    int result = -1;
 
-    // pthread_mutex_lock(&lock);
-    result = _ksetlsTlsRead(data, size, _fd);
-    // pthread_mutex_unlock(&lock);
+   pthread_mutex_lock(&lock);
+   result = _ksetlsTlsRead(data, size, _fd);
+   pthread_mutex_unlock(&lock);
 
     if (result < 0) {
         std::cout << "_ksetlsTlsRead() : Fail " << result << " " << (*size) << std::endl;
-        // return -1;
-        close();
-        throw std::runtime_error(strerror(errno));
+        return -1;
+        //close();
+        //        throw std::runtime_error(strerror(errno));
     }
 
     return result;

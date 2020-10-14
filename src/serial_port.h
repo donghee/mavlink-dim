@@ -68,6 +68,7 @@ class SerialPort
     int send(uint16_t size, uint8_t* data);
     int recv(int16_t* size, uint8_t* data);
     int read(uint8_t &cp);
+    int read_message(mavlink_message_t &message);
     int write(char *buf, unsigned len);
     void close();
 };

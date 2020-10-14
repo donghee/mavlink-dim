@@ -213,9 +213,9 @@ auto SerialPort::send(uint16_t size, uint8_t* data) -> int {
 }
 
 auto SerialPort::recv(int16_t* size, uint8_t* data) -> int {
-    uint8_t          msgReceived = false;
+    uint8_t msgReceived = false;
     mavlink_status_t status;
-    mavlink_message_t message;
+    static mavlink_message_t message;
 
    if (is_open != true)
    {
@@ -229,20 +229,22 @@ auto SerialPort::recv(int16_t* size, uint8_t* data) -> int {
 
    uint8_t cp;
 
-   while(!msgReceived) {
+   //while(!msgReceived) {
        int result = read(cp);
 
-       if (result < 0) {
-           return -1;
-       } else {
+       if (result > 0) {
            // the parsing
            msgReceived = mavlink_parse_char(MAVLINK_COMM_0, cp, &message, &status);
+	   if(msgReceived) {
+		printf("\r\nReceived message from serial with ID #%d (sys:%d|comp:%d):\n", message.msgid, message.sysid, message.compid);
+   		*size = mavlink_msg_to_send_buffer(data, &message);
+	   }
        }
-   }
+   //}
 
-   *size = mavlink_msg_to_send_buffer(data, &message);
+   //*size = mavlink_msg_to_send_buffer(data, &message);
 
-   return *size;
+   return msgReceived;
 }
 
 int SerialPort::read(uint8_t &cp)
@@ -263,4 +265,20 @@ int SerialPort::write(char *buf, unsigned int len)
     pthread_mutex_unlock(&lock);
 
     return bytesWritten;
+}
+
+int SerialPort::read_message(mavlink_message_t &message)
+{
+
+    uint8_t          cp;
+    mavlink_status_t status;
+    uint8_t          msgReceived = false;
+
+
+    int result = read(cp);
+
+    if (result > 0) {
+           msgReceived = mavlink_parse_char(MAVLINK_COMM_0, cp, &message, &status);
+    }
+    return msgReceived;
 }
