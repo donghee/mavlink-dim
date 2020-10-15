@@ -9,6 +9,13 @@
 #include <stdio.h>   // Standard input/output definitions
 #include <pthread.h> // This uses POSIX Threads
 
+#include <iostream>
+#include <stdexcept>
+
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
+
 #define SERVER_IP "192.168.88.26"
 
 namespace dronemap
@@ -40,7 +47,12 @@ namespace dronemap
                 throw 1;
             }
 
-            open(SERVER_IP, port, bind);
+            try {
+                open(SERVER_IP, port, bind);
+            } catch (...) {
+                std::cout << " catch runtime error (...) " << std::endl;
+                close();
+            }
         };
         ~DimSocket() {
             pthread_mutex_destroy(&lock);

@@ -1,10 +1,4 @@
 #include "dim.h"
-#include <iostream>
-#include <stdexcept>
-
-#include <signal.h>
-#include <string.h>
-#include <errno.h>
 
 extern "C" {
     #include "kse_ubuntu.h"
@@ -47,9 +41,10 @@ void DimSocket::open(const char *ip, unsigned long port, bool bind) {
     if (result == KSE_SUCCESS) {
         std::cout << "_ksePowerOn() : Success " << result << std::endl;
         show_kse_power_info(kse_power);
+    } else if (result == KSE_FAIL_ALREADY_POWERED_ON) {
+        std::cout << "_ksePowerOn() : Already power on " << result << std::endl;
     } else {
         std::cout << "_ksePowerOn() : Fail " << result << std::endl;
-
         close(); // TODO
         throw std::runtime_error(strerror(errno));
     }
@@ -109,25 +104,27 @@ int DimSocket::listen() {
     int result;
     // LISTEN AND ACCEPT
     result = ::listen(server_fd, 10);
-
     if (result < 0) {
         std::cout << "::listen() : Fail " << result << std::endl;
-        close(); // TODO resolve Aborted (core dumped)
+        // close(); // TODO resolve Aborted (core dumped)
         throw std::runtime_error(strerror(errno));
     }
 
     char sIpAddress[40];
     unsigned int client_addr_len = sizeof(_addr);
 
+    std::cout << "Wait for client.\r\n"  << std::endl;
     _fd = accept(server_fd,
                  reinterpret_cast<struct sockaddr *>(&_addr),
                  &client_addr_len);
+
     if (_fd < 0)
     {
         std::cout << "::accept() : Fail " << result << std::endl;
-        close(); // TODO resolve Aborted (core dumped)
+        // close(); // TODO resolve Aborted (core dumped)
         throw std::runtime_error(strerror(errno));
     }
+
     inet_ntop(AF_INET, &_addr.sin_addr.s_addr, sIpAddress,
               sizeof(sIpAddress));
     printf("Client(%s) connected.\r\n", sIpAddress);
@@ -138,7 +135,6 @@ int DimSocket::listen() {
         std::cout << "_kseTlsOpen() : Success " << result << std::endl;
     } else {
         std::cout << "_kseTlsOpen() : Fail " << result << std::endl;
-        close(); // TODO resolve Aborted (core dumped)
         throw std::runtime_error(strerror(errno));
     }
 
@@ -147,7 +143,6 @@ int DimSocket::listen() {
     if (result == KSE_SUCCESS) {
         std::cout << "_ksetlsTlsServerHandshake() : Success " << result << std::endl;
     } else {
-        close(); // TODO resolve Aborted (core dumped)
         std::cout << "_ksetlsTlsServerHandshake() : Fail " << result << std::endl;
     }
 
@@ -196,12 +191,12 @@ int DimSocket::connect() {
         std::cout << "_kseTlsOpen() : Success " << result << std::endl;
     } else {
         std::cout << "_kseTlsOpen() : Fail " << result << std::endl;
-        close(); // TODO resolve Aborted (core dumped)
+        // close(); // TODO resolve Aborted (core dumped)
         throw std::runtime_error(strerror(errno));
     }
 
     if (handshake() == -1 ) {
-        close(); // TODO resolve Aborted (core dumped)
+        // close(); // TODO resolve Aborted (core dumped)
         throw std::runtime_error(strerror(errno));
     }
 
@@ -284,15 +279,21 @@ auto DimSocket::recv(int16_t* size, uint8_t* data) -> int {
 }
 
 void DimSocket::close() {
-    // int result = _ksetlsTlsCloseNotify(_fd);
-    // if (result < 0) {
-    //     std::cout << "_ksetlsTlsCloseNotify() : Fail " << result << std::endl;
-    // } else {
-    //     std::cout << "_ksetlsTlsCloseNotify() : Success " << result << std::endl;
-    // }
+    int result = -1;
 
-    _ksetlsTlsCloseNotify(_fd);
-    _ksePowerOff();
+    result = _ksetlsTlsCloseNotify(_fd);
+    if (result < 0) {
+        std::cout << "_ksetlsTlsCloseNotify() : Fail " << result << std::endl;
+    } else {
+        std::cout << "_ksetlsTlsCloseNotify() : Success " << result << std::endl;
+    }
+
+    result = _ksePowerOff();
+    if (result < 0) {
+        std::cout << "_ksePowerOff() : Fail " << result << std::endl;
+    } else {
+        std::cout << "_ksePowerOff() : Success " << result << std::endl;
+    }
 
     disconnect();
 }
