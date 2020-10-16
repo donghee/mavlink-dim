@@ -42,7 +42,7 @@ uint64_t microsSinceEpoch()
   return micros;
 }
 
-void gc_worker() {
+void autopilot_read_message() {
   uint8_t gc_buffer[BUFFER_LENGTH];
   int16_t recv_size;
   int bytes_sent;
@@ -71,7 +71,7 @@ void gc_worker() {
   }
 }
 
-void fc_worker() {
+void gcs_read_message() {
   uint8_t fc_buffer[BUFFER_LENGTH];
   int16_t recv_size;;
   socklen_t fromlen = sizeof(gcAddr);
@@ -81,44 +81,39 @@ void fc_worker() {
 
   bool received = false;
   while (!received) {
-    try {
       // qgc -> fc
       // dim->connect(); // TODO: no new connection!
       recv_size = recvfrom(sock, (void *)fc_buffer, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
-     if (recv_size > 0)
+      if (recv_size > 0)
       {
-        //dim->send(recv_size, fc_buffer);
-        printf("\r\nfrom qgc %d\r\n",recv_size);
-        for (int i = 0; i < recv_size; ++i)
-        {
-          if (mavlink_parse_char(MAVLINK_COMM_0, fc_buffer[i], &msg, &status))
+          //dim->send(recv_size, fc_buffer);
+          printf("\r\nfrom qgc %d\r\n",recv_size);
+          for (int i = 0; i < recv_size; ++i)
           {
-            printf("packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-            // dim->send(recv_size, fc_buffer);
+              if (mavlink_parse_char(MAVLINK_COMM_0, fc_buffer[i], &msg, &status))
+              {
+                  printf("packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
+                  // dim->send(recv_size, fc_buffer);
+              }
           }
-        }
-        received = true;
+          received = true;
       }
-    } catch (...) {
-      std::cout << " catch runtime error (...) " << std::endl;
-      continue;
-    }
   }
 }
 
 void* start_gcs_read_thread(void *args)
 {
   while(run) {
-    fc_worker();
+    gcs_read_message();
     usleep(100); // 100hz
   }
   return NULL;
 }
 
-void* start_fc_read_thread(void *args)
+void* start_autopilot_read_thread(void *args)
 {
   while(run) {
-    gc_worker();
+    autopilot_read_message();
     usleep(1000); // 1000hz
   }
   return NULL;
@@ -127,16 +122,9 @@ void* start_fc_read_thread(void *args)
 
 int main(int argc, const char *argv[])
 {
-  // mavlink
   char target_ip[100];
-  float position[6] = {};
   sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  int bytes_sent;
-  mavlink_message_t msg;
-  uint16_t len;
-  int i = 0;
-  //int success = 0;
-  unsigned int temp = 0;
+
   strcpy(target_ip, "127.0.0.1");
 
   memset(&locAddr, 0, sizeof(locAddr));
@@ -169,7 +157,7 @@ int main(int argc, const char *argv[])
   int result;
   pthread_t read_tid, write_tid;
 
-  result = pthread_create( &read_tid, NULL, &start_fc_read_thread, (char*)"Autopilot Reading" );
+  result = pthread_create( &read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
   if ( result ) throw result;
 
   result = pthread_create( &write_tid, NULL, &start_gcs_read_thread, (char*)"Autopilot Writing" );
@@ -186,7 +174,6 @@ int main(int argc, const char *argv[])
   // t1.join();
 
   //dim->close();
-
 
   return 0;
 }

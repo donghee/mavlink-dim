@@ -28,7 +28,7 @@ void exit_app(int signum)
 }
 
 // qgc -> fc
-void gc_worker() {
+void gcs_read_message() {
   uint8_t gc_buffer[BUFFER_LENGTH];
   int16_t recv_size;
 
@@ -53,7 +53,7 @@ void gc_worker() {
 }
 
 // fc -> qgc
-void fc_worker() {
+void autopilot_read_message() {
   uint8_t fc_buffer[BUFFER_LENGTH];
   int16_t recv_size;
   int result;
@@ -64,15 +64,7 @@ void fc_worker() {
   mavlink_auth_key_t auth_key;
   mavlink_heartbeat_t heartbeat;
 
-  // Heart beat
-  // mavlink_msg_heartbeat_encode(255, 190, &message, &heartbeat);
-  // mavlink_msg_to_send_buffer((uint8_t*)fc_buffer, &message);
-  // printf("\r\nPort send");
-  // port->write(sizeof(fc_buffer), fc_buffer);
-  // printf("\r\nPort send");
-
   while (!received) {
-    // try {
       result = port->read_message(message);
       if (result > 0) {
 
@@ -107,27 +99,23 @@ void fc_worker() {
           }
         }
       }
-    // } catch (...) {
-    //   std::cout << " catch runtime error (...) " << std::endl;
-    //   continue;
-    // }
   }
 }
 
 
 void* start_autopilot_read_thread(void *args)
 {
-  while(run) {
-    fc_worker();
+    while(run) {
+        autopilot_read_message();
     //    usleep(100000); // 10hz
     //    usleep(50000); // 20hz
     //    usleep(10000); // 100hz
-    usleep(1000); // 1000hz
+        usleep(1000); // 1000hz
   }
   return NULL;
 }
 
-void* start_autopilot_write_thread(void *args)
+void* start_gcs_read_thread(void *args)
 {
   printf("\r\nbefore dim listen\r\n");
   try {
@@ -139,7 +127,7 @@ void* start_autopilot_write_thread(void *args)
   }
   printf("\r\nafter dim listen\r\n");
   while(run) {
-      gc_worker();
+      gcs_read_message();
   }
   return NULL;
 }
@@ -147,24 +135,24 @@ void* start_autopilot_write_thread(void *args)
 int main(int argc, const char *argv[])
 {
   int result;
-  pthread_t read_tid, write_tid;
+  pthread_t autopilot_read_tid, gcs_read_tid;
 
   port = new Serial_Port("/dev/ttyACM0", 57600);
   port->start();
 
-  result = pthread_create( &read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
+  result = pthread_create( &autopilot_read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
   if ( result ) throw result;
 
   dim = new DimSocket(4433, true);
 
-  result = pthread_create( &write_tid, NULL, &start_autopilot_write_thread, (char*)"Autopilot Writing" );
+  result = pthread_create( &gcs_read_tid, NULL, &start_gcs_read_thread, (char*)"GCS Reading" );
   if ( result ) throw result;
 
   // wait for exit
-  pthread_join(read_tid, NULL);
+  pthread_join(autopilot_read_tid, NULL);
 
   // wait for exit
-  pthread_join(write_tid, NULL);
+  pthread_join(gcs_read_tid, NULL);
 
   //  std::thread t0(gc_worker);
   //  std::thread t1(fc_worker);
