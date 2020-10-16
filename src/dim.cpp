@@ -218,40 +218,34 @@ int DimSocket::handshake() {
 }
 
 auto DimSocket::send(uint16_t size, uint8_t* data) -> int {
-   if (_connection_status != CONNECTED)
-   {
-      std::cout << "[DimSocket] send failed : not connected to a server." << std::endl;
-      return -1;
-   }
-   int result = -1;
-
-   pthread_mutex_lock(&lock);
-   if(size > 2048) {
-       result = _ksetlsTlsWrite(_fd, data, 2048);
-       if (result < 0) {
-           std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
-           return -1;
-           //           close();
-           //           throw std::runtime_error(strerror(errno));
-       }
-       result = _ksetlsTlsWrite(_fd, data+2048, size-2048);
-       if (result < 0) {
-           std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
-           return -1;
-           //           close();
-           //           throw std::runtime_error(strerror(errno));
-       }
-       return 0;
-   } else {
-    result = _ksetlsTlsWrite(_fd, data, size);
-    if (result < 0) {
-        std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+    if (_connection_status != CONNECTED)
+    {
+        std::cout << "[DimSocket] send failed : not connected to a server." << std::endl;
         return -1;
-        //close();
-        //throw std::runtime_error(strerror(errno));
     }
-   }
-   pthread_mutex_unlock(&lock);
+    int result = -1;
+
+    pthread_mutex_lock(&lock);
+    if(size > 2048) {
+        result = _ksetlsTlsWrite(_fd, data, 2048);
+        if (result < 0) {
+            std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+            return -1;
+        }
+        result = _ksetlsTlsWrite(_fd, data+2048, size-2048);
+        if (result < 0) {
+            std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+            return -1;
+        }
+        return 0;
+    } else {
+        result = _ksetlsTlsWrite(_fd, data, size);
+        if (result < 0) {
+            std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+            return -1;
+        }
+    }
+    pthread_mutex_unlock(&lock);
 
     return 0;
 }

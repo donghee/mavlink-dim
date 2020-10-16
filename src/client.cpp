@@ -50,24 +50,23 @@ void gc_worker() {
   static mavlink_message_t msg;
   mavlink_status_t status;
 
-  while(run) {
+  bool received = false;
+  while (!received) {
     // fc -> qgc
     int result = -1;
-    //memset(gc_buffer, 0, sizeof(gc_buffer));
     result = dim->recv(&recv_size, gc_buffer);
     if ( result > 0 ) {
       // bytes_sent = sendto(sock, gc_buffer, recv_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-      // printf("\r\nfrom fc %d \r\n", recv_size);
+      printf("\r\nfrom fc %d \r\n", recv_size);
       for (int i = 0; i < recv_size; ++i)
       {
         if (mavlink_parse_char(MAVLINK_COMM_0, gc_buffer[i], &msg, &status))
         {
-          // Packet received
-          // printf("packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
+          printf("packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
           bytes_sent = sendto(sock, gc_buffer, recv_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
         }
       }
-      // usleep(10000);
+      received = true;
     }
   }
 }
@@ -80,39 +79,50 @@ void fc_worker() {
   static mavlink_message_t msg;
   mavlink_status_t status;
 
-  while (run) {
+  bool received = false;
+  while (!received) {
     try {
       // qgc -> fc
       // dim->connect(); // TODO: no new connection!
-      //      memset(fc_buffer, 0, sizeof(fc_buffer));
       recv_size = recvfrom(sock, (void *)fc_buffer, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
      if (recv_size > 0)
       {
         //dim->send(recv_size, fc_buffer);
-        // Something received - print out all bytes and parse packet
-
         printf("\r\nfrom qgc %d\r\n",recv_size);
         for (int i = 0; i < recv_size; ++i)
         {
-          // temp = fc_buffer[i];
-          // printf("%02x ", (unsigned char)temp);
           if (mavlink_parse_char(MAVLINK_COMM_0, fc_buffer[i], &msg, &status))
           {
-            // Packet received
             printf("packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-            //            dim->send(recv_size, fc_buffer);
+            // dim->send(recv_size, fc_buffer);
           }
         }
+        received = true;
       }
     } catch (...) {
       std::cout << " catch runtime error (...) " << std::endl;
       continue;
-      // dim->close();
     }
-
   }
 }
 
+void* start_gcs_read_thread(void *args)
+{
+  while(run) {
+    fc_worker();
+    usleep(100); // 100hz
+  }
+  return NULL;
+}
+
+void* start_fc_read_thread(void *args)
+{
+  while(run) {
+    gc_worker();
+    usleep(1000); // 1000hz
+  }
+  return NULL;
+}
 
 
 int main(int argc, const char *argv[])
@@ -153,14 +163,27 @@ int main(int argc, const char *argv[])
   signal(SIGINT, exit_app);
 
   // dim
-  static auto _dim = DimSocket(4433);
-  dim = &_dim;
+  dim = new DimSocket(4433);
 
-  std::thread t0(gc_worker);
+  // pthread
+  int result;
+  pthread_t read_tid, write_tid;
+
+  result = pthread_create( &read_tid, NULL, &start_fc_read_thread, (char*)"Autopilot Reading" );
+  if ( result ) throw result;
+
+  result = pthread_create( &write_tid, NULL, &start_gcs_read_thread, (char*)"Autopilot Writing" );
+  if ( result ) throw result;
+
+  // wait for exit
+  pthread_join(read_tid, NULL);
+  pthread_join(write_tid, NULL);
+
+  // std::thread t0(gc_worker);
   // std::thread t1(fc_worker);
 
-  t0.join();
-  //  t1.join();
+  // t0.join();
+  // t1.join();
 
   //dim->close();
 

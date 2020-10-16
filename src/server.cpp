@@ -31,9 +31,7 @@ void exit_app(int signum)
 void gc_worker() {
   uint8_t gc_buffer[BUFFER_LENGTH];
   int16_t recv_size;
-  printf("\r\nbefore dim listen\r\n");
-  dim->listen();
-  printf("\r\nafter dim listen\r\n");
+
   while(run) {
     int result = -1;
     //    printf("\r\nbefore dim recv\r\n");
@@ -79,7 +77,7 @@ void fc_worker() {
       if (result > 0) {
 
           received = true;
-          printf("\r\nReceived message from serial with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
+          // printf("\r\nReceived message from serial with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
 
           // modify sys status
           if (message.msgid == MAVLINK_MSG_ID_SYS_STATUS) {
@@ -102,7 +100,7 @@ void fc_worker() {
               //case MAVLINK_MSG_ID_ALTITUDE:
           {
               recv_size = mavlink_msg_to_send_buffer((uint8_t*)fc_buffer, &message);
-              if (dim->is_connected()) {
+              if (dim && dim->is_connected()) {
                 dim->send(recv_size, fc_buffer);
               }
 
@@ -131,7 +129,18 @@ void* start_autopilot_read_thread(void *args)
 
 void* start_autopilot_write_thread(void *args)
 {
-  gc_worker();
+  printf("\r\nbefore dim listen\r\n");
+  try {
+      dim->listen();
+  } catch (...) {
+      std::cout << " catch runtime error (listen)" << std::endl;
+      dim->close();
+      return NULL;
+  }
+  printf("\r\nafter dim listen\r\n");
+  while(run) {
+      gc_worker();
+  }
   return NULL;
 }
 
@@ -143,10 +152,10 @@ int main(int argc, const char *argv[])
   port = new Serial_Port("/dev/ttyACM0", 57600);
   port->start();
 
-  dim = new DimSocket(4433, true);
-
   result = pthread_create( &read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
   if ( result ) throw result;
+
+  dim = new DimSocket(4433, true);
 
   result = pthread_create( &write_tid, NULL, &start_autopilot_write_thread, (char*)"Autopilot Writing" );
   if ( result ) throw result;
