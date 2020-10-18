@@ -16,7 +16,12 @@
 // #define BUFFER_LENGTH 3072
 #define BUFFER_LENGTH 8192
 
+#include "readerwriterqueue.h"
+
 using namespace dronemap;
+
+moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_gcs;
+moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
 
 static volatile sig_atomic_t run = 1;
 static DimSocket* dim;
@@ -24,6 +29,8 @@ static DimSocket* dim;
 static struct sockaddr_in gcAddr;
 static struct sockaddr_in locAddr;
 static int sock;
+static int thread_status = 0;
+static bool first_run = false;
 
 void exit_app(int signum)
 {
@@ -42,79 +49,134 @@ uint64_t microsSinceEpoch()
   return micros;
 }
 
-void autopilot_read_message() {
-  uint8_t gc_buffer[BUFFER_LENGTH];
-  int16_t recv_size;
-  int bytes_sent;
-
-  static mavlink_message_t msg;
-  mavlink_status_t status;
-
-  bool received = false;
-  while (!received) {
-    // fc -> qgc
-    int result = -1;
-    result = dim->recv(&recv_size, gc_buffer);
-    if ( result > 0 ) {
-      // bytes_sent = sendto(sock, gc_buffer, recv_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-      printf("\r\nfrom fc %d \r\n", recv_size);
-      for (int i = 0; i < recv_size; ++i)
-      {
-        if (mavlink_parse_char(MAVLINK_COMM_0, gc_buffer[i], &msg, &status))
-        {
-          printf("packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-          bytes_sent = sendto(sock, gc_buffer, recv_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-        }
-      }
-      received = true;
-    }
-  }
-}
-
+// gcs -> autopilot
 void gcs_read_message() {
   uint8_t fc_buffer[BUFFER_LENGTH];
   int16_t recv_size;;
   socklen_t fromlen = sizeof(gcAddr);
 
-  static mavlink_message_t msg;
+  static mavlink_message_t message;
   mavlink_status_t status;
 
   bool received = false;
   while (!received) {
-      // qgc -> fc
       // dim->connect(); // TODO: no new connection!
       recv_size = recvfrom(sock, (void *)fc_buffer, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
       if (recv_size > 0)
       {
+          // printf("GCS YES Received\r\n");
           //dim->send(recv_size, fc_buffer);
-          printf("\r\nfrom qgc %d\r\n",recv_size);
           for (int i = 0; i < recv_size; ++i)
           {
-              if (mavlink_parse_char(MAVLINK_COMM_0, fc_buffer[i], &msg, &status))
+              if (mavlink_parse_char(MAVLINK_COMM_0, fc_buffer[i], &message, &status))
               {
-                  printf("packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-                  // dim->send(recv_size, fc_buffer);
+                  q_to_autopilot.enqueue(message);
+                  received = true;
               }
           }
-          received = true;
+      } else {
+        // printf("GCS Not Received\r\n");
       }
   }
 }
 
+void autopilot_write_message() {
+    uint8_t send_buffer[BUFFER_LENGTH];
+    int16_t send_size;
+
+    mavlink_message_t message;
+
+    // Fully-blocking
+    q_to_autopilot.wait_dequeue(message);
+
+    printf("Received message from gcs with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
+
+    send_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
+    dim->send(send_size, send_buffer);
+    first_run = true;
+}
+
+// autopilot -> qgc
+void autopilot_read_message() {
+  uint8_t gc_buffer[BUFFER_LENGTH];
+  int16_t recv_size;
+  int bytes_sent;
+
+  static mavlink_message_t message;
+  mavlink_status_t status;
+
+  uint8_t send_buffer[BUFFER_LENGTH];
+  int16_t send_size;
+
+  bool received = false;
+  while (!received && first_run) {
+    int result = -1;
+    result = dim->recv(&recv_size, gc_buffer);
+    if ( result > 0 ) {
+        bytes_sent = sendto(sock, gc_buffer, recv_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
+        received = true;
+      // for (int i = 0; i < recv_size; ++i)
+      // {
+      //   if (mavlink_parse_char(MAVLINK_COMM_0, gc_buffer[i], &message, &status))
+      //   {
+      //       q_to_gcs.enqueue(message);
+      //       received = true;
+      //   }
+      // }
+    }
+  }
+}
+
+void gcs_write_message() {
+    uint8_t send_buffer[BUFFER_LENGTH];
+    int16_t send_size;
+
+    mavlink_message_t message;
+
+    // Fully-blocking
+    q_to_gcs.wait_dequeue(message);
+
+    printf("Received message from fc with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
+
+    send_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
+    sendto(sock, send_buffer, send_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
+}
+
+// read and write
 void* start_gcs_read_thread(void *args)
 {
   while(run) {
-    gcs_read_message();
-    usleep(100); // 100hz
+      gcs_read_message();
+      usleep(1000); // 1000hz
   }
   return NULL;
 }
 
-void* start_autopilot_read_thread(void *args)
+void* start_autopilot_write_thread(void *args)
 {
   while(run) {
-    autopilot_read_message();
-    usleep(1000); // 1000hz
+      autopilot_write_message();
+      usleep(100000); // 10hz
+  }
+  return NULL;
+}
+
+// read and write
+void* start_autopilot_read_thread(void *args)
+{
+  dim->init_poll();
+  while(run) {
+      autopilot_read_message();
+      usleep(1000); // 1000hz
+  }
+  return NULL;
+}
+
+void* start_gcs_write_thread(void *args)
+{
+  while(run) {
+      gcs_write_message();
+      usleep(1000); // 1000hz
   }
   return NULL;
 }
@@ -155,17 +217,25 @@ int main(int argc, const char *argv[])
 
   // pthread
   int result;
-  pthread_t read_tid, write_tid;
+  pthread_t autopilot_read_tid, gcs_write_tid, gcs_read_tid, autopilot_write_tid;
 
-  result = pthread_create( &read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
+  result = pthread_create( &autopilot_read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
   if ( result ) throw result;
 
-  result = pthread_create( &write_tid, NULL, &start_gcs_read_thread, (char*)"Autopilot Writing" );
+  result = pthread_create( &gcs_write_tid, NULL, &start_gcs_write_thread, (char*)"GCS Writing" );
+  if ( result ) throw result;
+
+  result = pthread_create( &gcs_read_tid, NULL, &start_gcs_read_thread, (char*)"GCS Reading" );
+  if ( result ) throw result;
+
+  result = pthread_create( &autopilot_write_tid, NULL, &start_autopilot_write_thread, (char*)"Autopilot Writing" );
   if ( result ) throw result;
 
   // wait for exit
-  pthread_join(read_tid, NULL);
-  pthread_join(write_tid, NULL);
+  pthread_join(autopilot_read_tid, NULL);
+  pthread_join(gcs_write_tid, NULL);
+  pthread_join(gcs_read_tid, NULL);
+  pthread_join(autopilot_write_tid, NULL);
 
   // std::thread t0(gc_worker);
   // std::thread t1(fc_worker);

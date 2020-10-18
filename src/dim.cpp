@@ -76,19 +76,25 @@ int DimSocket::bind_() {
     int result;
 
     // SOCKET OPEN
-    if ( server_fd = ::socket(AF_INET, SOCK_STREAM, 0); server_fd == -1) {
-    //if ( server_fd = ::socket(AF_INET, SOCK_DGRAM, 0); server_fd == -1) { //udp
+    if ( _server_fd = ::socket(AF_INET, SOCK_STREAM, 0); _server_fd == -1) {
+    //if ( _server_fd = ::socket(AF_INET, SOCK_DGRAM, 0); _server_fd == -1) { //udp
         throw std::runtime_error(strerror(errno));
     }
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_addr.sin_port = htons(4433);
+    // // RCVTIMEO
+    // struct timeval tv;
+    // tv.tv_sec = 1;
+    // tv.tv_usec = 0;
+    // setsockopt(_server_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
+    _server_addr.sin_family = AF_INET;
+    _server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    _server_addr.sin_port = htons(4433);
 
     // BIND
-    result = ::bind(server_fd,
-                    reinterpret_cast<struct sockaddr *>(&server_addr),
-                    sizeof(server_addr));
+    result = ::bind(_server_fd,
+                    reinterpret_cast<struct sockaddr *>(&_server_addr),
+                    sizeof(_server_addr));
 
     if (result == 0) {
         std::cout << "::bind() : Success " << result << std::endl;
@@ -102,19 +108,19 @@ int DimSocket::bind_() {
 
 int DimSocket::listen() {
     int result;
+    char sIpAddress[40];
+    unsigned int client_addr_len = sizeof(_addr);
+
     // LISTEN AND ACCEPT
-    result = ::listen(server_fd, 10);
+    result = ::listen(_server_fd, 10);
     if (result < 0) {
         std::cout << "::listen() : Fail " << result << std::endl;
         // close(); // TODO resolve Aborted (core dumped)
         throw std::runtime_error(strerror(errno));
     }
 
-    char sIpAddress[40];
-    unsigned int client_addr_len = sizeof(_addr);
-
     std::cout << "Wait for client.\r\n"  << std::endl;
-    _fd = accept(server_fd,
+    _fd = accept(_server_fd,
                  reinterpret_cast<struct sockaddr *>(&_addr),
                  &client_addr_len);
 
@@ -134,6 +140,7 @@ int DimSocket::listen() {
     if (result == KSE_SUCCESS) {
         std::cout << "_kseTlsOpen() : Success " << result << std::endl;
     } else {
+
         std::cout << "_kseTlsOpen() : Fail " << result << std::endl;
         throw std::runtime_error(strerror(errno));
     }
@@ -167,6 +174,12 @@ int DimSocket::connect() {
       //if ( _fd = ::socket(PF_INET, SOCK_DGRAM, 0); _fd == -1) { // udp
         throw std::runtime_error(strerror(errno));
     }
+
+    // // RCVTIMEO
+    // struct timeval tv;
+    // tv.tv_sec = 1;
+    // tv.tv_usec = 0;
+    // setsockopt(_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     _addr.sin_family = AF_INET;
     _addr.sin_addr.s_addr = inet_addr(SERVER_IP);
@@ -217,6 +230,14 @@ int DimSocket::handshake() {
     return 0;
 }
 
+void DimSocket::init_poll() {
+    memset(fds, 0, sizeof(fds));
+    fds[0].events = POLLIN;
+    fds[0].fd = _fd;
+    fds[1].events = POLLIN;
+    fds[1].fd = _server_fd;
+}
+
 auto DimSocket::send(uint16_t size, uint8_t* data) -> int {
     if (_connection_status != CONNECTED)
     {
@@ -225,7 +246,14 @@ auto DimSocket::send(uint16_t size, uint8_t* data) -> int {
     }
     int result = -1;
 
-    pthread_mutex_lock(&lock);
+    // std::cout << "before dim write 0 " << std::endl;
+    while (on_read){
+    };
+
+    // pthread_mutex_lock(&lock);
+    on_write = true;
+    //    pthread_cond_wait(&send_cond, &lock);
+    // std::cout << "before dim write 1 " << std::endl;
     if(size > 2048) {
         result = _ksetlsTlsWrite(_fd, data, 2048);
         if (result < 0) {
@@ -245,7 +273,10 @@ auto DimSocket::send(uint16_t size, uint8_t* data) -> int {
             return -1;
         }
     }
-    pthread_mutex_unlock(&lock);
+    on_write = false;
+    // std::cout << "after dim write " << std::endl;
+    // pthread_mutex_unlock(&lock);
+    //pthread_cond_signal(&recv_cond);
 
     return 0;
 }
@@ -257,17 +288,31 @@ auto DimSocket::recv(int16_t* size, uint8_t* data) -> int {
       return -1;
    }
    int result = -1;
+   // pthread_mutex_lock(&lock);
+   // while(on_write) {
+   //      printf("-");
+   // }
+   //std::cout << "before dim read 0" << std::endl;
+   on_read = true;
+   //   std::cout << "before dim read 1" << std::endl;
+   //pthread_cond_wait(&recv_cond, &lock);
+   if (poll(fds, 1, 30) > 0 && !on_write) {
+       //       std::cout << "poll fds" << std::endl;
+       if (fds[0].revents & POLLIN) {
+           std::cout << "poll before tls read" << std::endl;
+           // result = _ksetlsTlsRead(data, size, _fd);
+           result = _ksetlsTlsRead(data, size, fds[0].fd);
+           std::cout << "poll after tls read" << std::endl;
+       }
+   }
 
-   pthread_mutex_lock(&lock);
-   result = _ksetlsTlsRead(data, size, _fd);
-   pthread_mutex_unlock(&lock);
+   // on_read = true;
+   // result = _ksetlsTlsRead(data, size, _fd);
 
-    if (result < 0) {
-        std::cout << "_ksetlsTlsRead() : Fail " << result << " " << (*size) << std::endl;
-        return -1;
-        //close();
-        //        throw std::runtime_error(strerror(errno));
-    }
+   //   std::cout << "after dim read " << std::endl;
+   on_read = false;
+   // pthread_mutex_unlock(&lock);
+   //pthread_cond_signal(&send_cond);
 
     return result;
 }
