@@ -299,10 +299,10 @@ auto DimSocket::recv(int16_t* size, uint8_t* data) -> int {
    if (poll(fds, 1, 30) > 0 && !on_write) {
        //       std::cout << "poll fds" << std::endl;
        if (fds[0].revents & POLLIN) {
-           std::cout << "poll before tls read" << std::endl;
+           // std::cout << "poll before tls read" << std::endl;
            // result = _ksetlsTlsRead(data, size, _fd);
            result = _ksetlsTlsRead(data, size, fds[0].fd);
-           std::cout << "poll after tls read" << std::endl;
+           // std::cout << "poll after tls read" << std::endl;
        }
    }
 

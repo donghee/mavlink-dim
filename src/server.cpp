@@ -53,14 +53,11 @@ void gcs_write_message() {
     int16_t recv_size;
 
     mavlink_message_t message;
-
     mavlink_sys_status_t sys_status;
     // mavlink_auth_key_t auth_key;
 
     // Fully-blocking
     q_to_gcs.wait_dequeue(message);
-
-    // printf("Received message from serial with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
 
     // Modify sys status
     if (message.msgid == MAVLINK_MSG_ID_SYS_STATUS) {
@@ -81,6 +78,7 @@ void gcs_write_message() {
         // case MAVLINK_MSG_ID_ATTITUDE_QUATERNION:
             //case MAVLINK_MSG_ID_ALTITUDE:
             {
+                printf("Received message from serial with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
                 recv_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
                 if (dim && dim->is_connected()) {
                     dim->send(recv_size, send_buffer);
@@ -96,16 +94,15 @@ void gcs_read_message() {
     static mavlink_message_t message;
     mavlink_status_t status;
 
-    uint8_t gc_buffer[BUFFER_LENGTH];
+    uint8_t recv_buffer[BUFFER_LENGTH];
     int16_t recv_size;
 
     while(!received) {
-
-        result = dim->recv(&recv_size, gc_buffer);
+        result = dim->recv(&recv_size, recv_buffer);
         if (result >= 0) {
             for (int i = 0; i < recv_size; ++i)
             {
-                if (mavlink_parse_char(MAVLINK_COMM_0, gc_buffer[i], &message, &status))
+                if (mavlink_parse_char(MAVLINK_COMM_0, recv_buffer[i], &message, &status))
                 {
                     q_to_autopilot.enqueue(message);
                     received = true;
@@ -132,10 +129,7 @@ void* start_autopilot_read_thread(void *args)
 {
     while(run) {
         autopilot_read_message();
-    //    usleep(100000); // 10hz
-    //    usleep(50000); // 20hz
-       usleep(10000); // 100hz
-        // usleep(1000); // 1000hz
+        usleep(1000); // 1000hz
   }
   return NULL;
 }
@@ -163,9 +157,9 @@ void* start_gcs_read_thread(void *args)
   dim->init_poll();
   while(run) {
       gcs_read_message();
-      // usleep(1000000); // 1hz
       usleep(10000); // 100hz very important
   }
+
   return NULL;
 }
 
@@ -173,9 +167,6 @@ void* start_autopilot_write_thread(void *args)
 {
     while(run) {
         autopilot_write_message();
-    //    usleep(100000); // 10hz
-    //    usleep(50000); // 20hz
-    //    usleep(10000); // 100hz
         usleep(1000); // 1000hz
   }
   return NULL;
@@ -186,6 +177,8 @@ int main(int argc, const char *argv[])
 {
   int result;
   pthread_t autopilot_read_tid, gcs_read_tid, gcs_write_tid, autopilot_write_tid;
+
+  // signal(SIGINT, exit_app);
 
   port = new Serial_Port("/dev/ttyACM0", 57600);
   port->start();
@@ -216,14 +209,9 @@ int main(int argc, const char *argv[])
   // wait for exit
   pthread_join(autopilot_write_tid, NULL);
 
-  //  std::thread t0(gc_worker);
-  //  std::thread t1(fc_worker);
-
-  //  t0.join();
-  //  t1.join();
-
-  //dim->close();
-  //port->close();
+  std::cout << "Close" << std::endl;
+  dim->close();
+  port->stop();
 
   return 0;
 }

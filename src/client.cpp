@@ -29,7 +29,6 @@ static DimSocket* dim;
 static struct sockaddr_in gcAddr;
 static struct sockaddr_in locAddr;
 static int sock;
-static int thread_status = 0;
 static bool first_run = false;
 
 void exit_app(int signum)
@@ -51,8 +50,8 @@ uint64_t microsSinceEpoch()
 
 // gcs -> autopilot
 void gcs_read_message() {
-  uint8_t fc_buffer[BUFFER_LENGTH];
-  int16_t recv_size;;
+  uint8_t recv_buffer[BUFFER_LENGTH];
+  int16_t recv_size;
   socklen_t fromlen = sizeof(gcAddr);
 
   static mavlink_message_t message;
@@ -61,14 +60,14 @@ void gcs_read_message() {
   bool received = false;
   while (!received) {
       // dim->connect(); // TODO: no new connection!
-      recv_size = recvfrom(sock, (void *)fc_buffer, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
+      recv_size = recvfrom(sock, (void *)recv_buffer, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
       if (recv_size > 0)
       {
           // printf("GCS YES Received\r\n");
-          //dim->send(recv_size, fc_buffer);
+          //dim->send(recv_size, recv_buffer);
           for (int i = 0; i < recv_size; ++i)
           {
-              if (mavlink_parse_char(MAVLINK_COMM_0, fc_buffer[i], &message, &status))
+              if (mavlink_parse_char(MAVLINK_COMM_0, recv_buffer[i], &message, &status))
               {
                   q_to_autopilot.enqueue(message);
                   received = true;
@@ -98,31 +97,26 @@ void autopilot_write_message() {
 
 // autopilot -> qgc
 void autopilot_read_message() {
-  uint8_t gc_buffer[BUFFER_LENGTH];
+  uint8_t recv_buffer[BUFFER_LENGTH];
   int16_t recv_size;
-  int bytes_sent;
 
   static mavlink_message_t message;
   mavlink_status_t status;
 
-  uint8_t send_buffer[BUFFER_LENGTH];
-  int16_t send_size;
-
   bool received = false;
   while (!received && first_run) {
     int result = -1;
-    result = dim->recv(&recv_size, gc_buffer);
+    result = dim->recv(&recv_size, recv_buffer);
     if ( result > 0 ) {
-        bytes_sent = sendto(sock, gc_buffer, recv_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
         received = true;
-      // for (int i = 0; i < recv_size; ++i)
-      // {
-      //   if (mavlink_parse_char(MAVLINK_COMM_0, gc_buffer[i], &message, &status))
-      //   {
-      //       q_to_gcs.enqueue(message);
-      //       received = true;
-      //   }
-      // }
+      for (int i = 0; i < recv_size; ++i)
+      {
+        if (mavlink_parse_char(MAVLINK_COMM_0, recv_buffer[i], &message, &status))
+        {
+            q_to_gcs.enqueue(message);
+            received = true;
+        }
+      }
     }
   }
 }
@@ -167,7 +161,7 @@ void* start_autopilot_read_thread(void *args)
   dim->init_poll();
   while(run) {
       autopilot_read_message();
-      usleep(1000); // 1000hz
+      usleep(100); // 10000hz
   }
   return NULL;
 }
@@ -237,13 +231,7 @@ int main(int argc, const char *argv[])
   pthread_join(gcs_read_tid, NULL);
   pthread_join(autopilot_write_tid, NULL);
 
-  // std::thread t0(gc_worker);
-  // std::thread t1(fc_worker);
-
-  // t0.join();
-  // t1.join();
-
-  //dim->close();
+  dim->close();
 
   return 0;
 }
