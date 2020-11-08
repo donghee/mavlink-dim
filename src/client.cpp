@@ -48,6 +48,15 @@ uint64_t microsSinceEpoch()
   return micros;
 }
 
+void debug_mavlink_msg_buffer(uint8_t* buffer, int buffer_size) {
+    printf("MAVLink Buffer: 0x");
+    for (int i = 0; i < buffer_size; ++i)
+        printf("%X", buffer[i]);
+    printf("\n");
+
+    return;
+}
+
 // gcs -> autopilot
 void gcs_read_message() {
   uint8_t recv_buffer[BUFFER_LENGTH];
@@ -79,6 +88,8 @@ void gcs_read_message() {
   }
 }
 
+
+
 void autopilot_write_message() {
     uint8_t send_buffer[BUFFER_LENGTH];
     int16_t send_size;
@@ -91,6 +102,9 @@ void autopilot_write_message() {
     printf("Received message from gcs with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
 
     send_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
+    // debug
+    debug_mavlink_msg_buffer(send_buffer, send_size);
+
     dim->send(send_size, send_buffer);
     first_run = true;
 }
@@ -133,6 +147,9 @@ void gcs_write_message() {
     printf("Received message from fc with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
 
     send_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
+    // debug
+    debug_mavlink_msg_buffer(send_buffer, send_size);
+ 
     sendto(sock, send_buffer, send_size, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
 }
 

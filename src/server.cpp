@@ -32,6 +32,14 @@ void exit_app(int signum)
   std::cout << "Caught signal " << signum << std::endl;
 }
 
+void debug_mavlink_msg_buffer(uint8_t* buffer, int buffer_size) {
+    printf("MAVLink Buffer: 0x");
+    for (int i = 0; i < buffer_size; ++i)
+        printf("%X", buffer[i]);
+    printf("\n");
+
+    return;
+}
 
 // autopilot -> gcs
 void autopilot_read_message() {
@@ -80,6 +88,8 @@ void gcs_write_message() {
             {
                 printf("Received message from serial with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
                 recv_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
+	        // debug
+    	        debug_mavlink_msg_buffer(send_buffer, recv_size);
                 if (dim && dim->is_connected()) {
                     dim->send(recv_size, send_buffer);
                 }
@@ -100,6 +110,8 @@ void gcs_read_message() {
     while(!received) {
         result = dim->recv(&recv_size, recv_buffer);
         if (result >= 0) {
+	    // debug
+    	    debug_mavlink_msg_buffer(recv_buffer, recv_size);
             for (int i = 0; i < recv_size; ++i)
             {
                 if (mavlink_parse_char(MAVLINK_COMM_0, recv_buffer[i], &message, &status))
