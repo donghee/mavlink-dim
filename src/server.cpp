@@ -24,7 +24,11 @@ moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
 static volatile sig_atomic_t run = 1;
 static Serial_Port* port;
 static DimSocket* dim;
-static volatile bool autopilot_reading_state = false;
+//static volatile bool autopilot_reading_state = false;
+
+
+static volatile int autopilot_reading_status = 0;
+static volatile int autopilot_writing_status = 0;
 
 void exit_app(int signum)
 {
@@ -45,14 +49,63 @@ void debug_mavlink_msg_buffer(uint8_t* buffer, int buffer_size) {
 void autopilot_read_message() {
     int result;
     bool received = false;
-    mavlink_message_t message;
+    bool received_heartbeat = false;
+    bool received_sys_status = false;
+    bool received_attitude = false;
 
     while (!received) {
+        mavlink_message_t message;
         result = port->read_message(message);
         if (result > 0) {
-            q_to_gcs.enqueue(message);
-            received = true;
+            if (message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
+                message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
+                message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
+                message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
+                message.msgid == MAVLINK_MSG_ID_SERVO_OUTPUT_RAW ||
+                message.msgid == MAVLINK_MSG_ID_HIGHRES_IMU ||
+                message.msgid == MAVLINK_MSG_ID_TIMESYNC ||
+                message.msgid == MAVLINK_MSG_ID_VFR_HUD ||
+                message.msgid == MAVLINK_MSG_ID_VIBRATION ||
+                message.msgid == MAVLINK_MSG_ID_SCALED_IMU ||
+                message.msgid == MAVLINK_MSG_ID_SCALED_IMU2 ||
+		message.msgid == MAVLINK_MSG_ID_ACTUATOR_CONTROL_TARGET ||
+                message.msgid == MAVLINK_MSG_ID_ALTITUDE)  {
+		    continue;
+	    }
+	    //printf("%d ", message.msgid);
+
+	    /*
+            if (message.msgid == MAVLINK_MSG_ID_SYS_STATUS)  {
+                received_sys_status = true;
+                q_to_gcs.enqueue(message);
+	    }
+            if (message.msgid == MAVLINK_MSG_ID_HEARTBEAT)  {
+                received_heartbeat = true;
+                q_to_gcs.enqueue(message);
+	    }
+            if (message.msgid == MAVLINK_MSG_ID_ATTITUDE)  {
+                received_attitude = true;
+                //q_to_gcs.enqueue(message);
+	    }
+	    */
+	    /*
+            if (message.msgid == MAVLINK_MSG_ID_GPS_RAW_INT)  {
+                //received_attitude = true;
+                q_to_gcs.enqueue(message);
+	    }
+	    if (message.msgid == MAVLINK_MSG_ID_STATUSTEXT)  {
+                //received_attitude = true;
+                q_to_gcs.enqueue(message);
+	    }
+	    */
+                q_to_gcs.enqueue(message);
+
+            received = received_heartbeat;
+            //received = received_heartbeat && received_sys_status
+		    //&& received_attitude;
         }
+        if ( autopilot_writing_status > false )
+            usleep(100); // 10kHz
     }
 }
 
@@ -67,6 +120,7 @@ void gcs_write_message() {
     // Fully-blocking
     q_to_gcs.wait_dequeue(message);
 
+    /*
     // Modify sys status
     if (message.msgid == MAVLINK_MSG_ID_SYS_STATUS) {
         mavlink_msg_sys_status_decode(&message, &sys_status);
@@ -75,17 +129,21 @@ void gcs_write_message() {
         // memset(auth_key.key, '\0', 32);
         // mavlink_msg_auth_key_encode(1, 1, &message, &auth_key);
     }
+    */
 
+    /*
     switch (message.msgid)
     {
         case MAVLINK_MSG_ID_HEARTBEAT:
         case MAVLINK_MSG_ID_SYS_STATUS:
         // case MAVLINK_MSG_ID_AUTH_KEY:
+        case MAVLINK_MSG_ID_GPS_RAW_INT:
             //case MAVLINK_MSG_ID_HIGHRES_IMU:
-            //case MAVLINK_MSG_ID_ATTITUDE:
+        case MAVLINK_MSG_ID_ATTITUDE:
         // case MAVLINK_MSG_ID_ATTITUDE_QUATERNION:
             //case MAVLINK_MSG_ID_ALTITUDE:
             {
+	    */
                 printf("Received message from serial with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
                 recv_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
 	        // debug
@@ -93,8 +151,10 @@ void gcs_write_message() {
                 if (dim && dim->is_connected()) {
                     dim->send(recv_size, send_buffer);
                 }
+		/*
             }
     }
+    */
 }
 
 // gcs -> autopilot
@@ -121,6 +181,9 @@ void gcs_read_message() {
                 }
             }
         }
+
+        //if ( dim_writing_status > false )
+            usleep(10); // 10kHz
      }
 }
 
@@ -131,18 +194,26 @@ void autopilot_write_message() {
     q_to_autopilot.wait_dequeue(message);
 
     printf("Received message from gcs with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
-
+ 
+    autopilot_writing_status = true;
     if(port){
         port->write_message(message);
     }
+    autopilot_writing_status = false;
 }
 
 void* start_autopilot_read_thread(void *args)
 {
-    while(run) {
+  autopilot_reading_status = true;
+
+  while(run) {
         autopilot_read_message();
-        usleep(1000); // 1000hz
+        //usleep(1000); // 1000hz
+        usleep(10); // 100000hz
   }
+
+  autopilot_reading_status = false;
+
   return NULL;
 }
 
@@ -150,7 +221,8 @@ void* start_gcs_write_thread(void *args)
 {
   while(run) {
       gcs_write_message();
-      usleep(1000); // 1000hz
+      //usleep(1000); // 1000hz
+      usleep(10); // 1000hz
   }
   return NULL;
 }
@@ -170,6 +242,7 @@ void* start_gcs_read_thread(void *args)
   while(run) {
       gcs_read_message();
       usleep(10000); // 100hz very important
+      //usleep(10); // test
   }
 
   return NULL;
@@ -179,7 +252,9 @@ void* start_autopilot_write_thread(void *args)
 {
     while(run) {
         autopilot_write_message();
-        usleep(1000); // 1000hz
+        //usleep(1000); // 1000hz
+        //usleep(100000); // 10hz
+      usleep(10); // test
   }
   return NULL;
 }

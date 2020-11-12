@@ -84,6 +84,7 @@ void gcs_read_message() {
           }
       } else {
         // printf("GCS Not Received\r\n");
+	usleep(10);
       }
   }
 }
@@ -111,6 +112,7 @@ void autopilot_write_message() {
 
 // autopilot -> qgc
 void autopilot_read_message() {
+  int result;
   uint8_t recv_buffer[BUFFER_LENGTH];
   int16_t recv_size;
 
@@ -118,11 +120,11 @@ void autopilot_read_message() {
   mavlink_status_t status;
 
   bool received = false;
-  while (!received && first_run) {
-    int result = -1;
+  //while (!received && first_run) {
+  while (!received) {
     result = dim->recv(&recv_size, recv_buffer);
     if ( result > 0 ) {
-        received = true;
+        //received = true;
       for (int i = 0; i < recv_size; ++i)
       {
         if (mavlink_parse_char(MAVLINK_COMM_0, recv_buffer[i], &message, &status))
@@ -158,7 +160,8 @@ void* start_gcs_read_thread(void *args)
 {
   while(run) {
       gcs_read_message();
-      usleep(1000); // 1000hz
+      //usleep(1000); // 1000hz
+      usleep(10); // 100000hz
   }
   return NULL;
 }
@@ -178,7 +181,8 @@ void* start_autopilot_read_thread(void *args)
   dim->init_poll();
   while(run) {
       autopilot_read_message();
-      usleep(100); // 10000hz
+      //usleep(100); // 10000hz
+      usleep(10); // 10000hz
   }
   return NULL;
 }
