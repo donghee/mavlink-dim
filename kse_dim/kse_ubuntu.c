@@ -20,7 +20,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Select or not.
-#define ENABLE_DEBUG_PRINT
+//#define ENABLE_DEBUG_PRINT
 //#define USB_INTERRUPT_TRANSFER
 
 

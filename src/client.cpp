@@ -25,6 +25,7 @@ moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
 
 static volatile sig_atomic_t run = 1;
 static DimSocket* dim;
+static volatile int dim_writing_status = 0;
 
 static struct sockaddr_in gcAddr;
 static struct sockaddr_in locAddr;
@@ -79,7 +80,7 @@ void gcs_read_message() {
               if (mavlink_parse_char(MAVLINK_COMM_0, recv_buffer[i], &message, &status))
               {
                   q_to_autopilot.enqueue(message);
-                  received = true;
+                  //received = true;
               }
           }
       } else {
@@ -106,7 +107,9 @@ void autopilot_write_message() {
     // debug
     debug_mavlink_msg_buffer(send_buffer, send_size);
 
+    dim_writing_status = true;
     dim->send(send_size, send_buffer);
+    dim_writing_status = false;
     first_run = true;
 }
 
@@ -130,10 +133,13 @@ void autopilot_read_message() {
         if (mavlink_parse_char(MAVLINK_COMM_0, recv_buffer[i], &message, &status))
         {
             q_to_gcs.enqueue(message);
-            received = true;
+        //    received = true;
         }
       }
     }
+    usleep(10);
+    if ( dim_writing_status > false )
+        usleep(100); // 10kHz
   }
 }
 

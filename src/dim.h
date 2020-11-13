@@ -18,7 +18,8 @@
 
 #include <poll.h>
 
-#define SERVER_IP "192.168.88.26"
+//#define SERVER_IP "192.168.88.26"
+#define SERVER_IP "10.243.61.157"
 
 namespace dronemap
 {
