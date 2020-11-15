@@ -47,6 +47,9 @@ namespace dronemap
 
         bool _bind = false;
 
+        int _tls_read_error = false;
+        int _tls_write_error = false;
+
         //poll
         struct pollfd fds[2];
 
@@ -73,8 +76,9 @@ namespace dronemap
             try {
                 open(SERVER_IP, port, bind);
             } catch (...) {
-                std::cout << " catch runtime error (...) " << std::endl;
+                std::cout << " catch runtime error (dim open) " << std::endl;
                 close();
+                throw std::runtime_error(strerror(errno));
             }
         };
 
@@ -88,13 +92,19 @@ namespace dronemap
         void open(const char *ip, unsigned long port, bool bind = false);
         int bind_();
         int listen();
+        int accept();
         int connect();
-        void disconnect();
+
         bool is_connected() const { return _connection_status == CONNECTED; };
+        bool is_writing();
+        bool is_reading();
         int handshake();
         int send(uint16_t size, uint8_t* data);
         int recv(int16_t* size, uint8_t* data);
-        void close();
+        int tls_close_notify();
+        int tls_close();
+        int close();
+        void power_off();
 
         void init_poll();
 

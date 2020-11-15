@@ -30,7 +30,9 @@ static void show_kse_power_info(kse_power_t kse_power) {
     printf("  * FileSize         : %d\r\n", kse_power.usInfoFileSize);
 }
 
+
 void DimSocket::open(const char *ip, unsigned long port, bool bind) {
+
     // KSE POWER ON
     int16_t result;
     struct kse_power_t kse_power;
@@ -43,49 +45,49 @@ void DimSocket::open(const char *ip, unsigned long port, bool bind) {
         show_kse_power_info(kse_power);
     } else if (result == KSE_FAIL_ALREADY_POWERED_ON) {
         std::cout << "_ksePowerOn() : Already power on " << result << std::endl;
+        result = _ksePowerOff();
+        if (result < 0) {
+            std::cout << "_ksePowerOff() : Fail " << result << std::endl;
+        } else {
+            std::cout << "_ksePowerOff() : Success " << result << std::endl;
+        }
+        throw std::runtime_error(strerror(errno));
     } else {
         std::cout << "_ksePowerOn() : Fail " << result << std::endl;
-        close(); // TODO
+        _ksePowerOff();
         throw std::runtime_error(strerror(errno));
     }
 
     _handshake_type = KSETLS_FULL_HANDSHAKE;
 
     if (bind != true) {
-        // Client CONNECT
+        // Client
         if (connect() == -1) {
             close(); // TODO
             throw std::runtime_error(strerror(errno));
         }
     } else {
+        // Server
         if (bind_() == -1) {
-            close(); // TODO
+            close(); // TODO ?
             throw std::runtime_error(strerror(errno));
-      }
+        }
+        if (listen() == -1) {
+            close(); // TODO ?
+            throw std::runtime_error(strerror(errno));
+        }
     }
     return;
 }
 
-void DimSocket::disconnect() {
-    ::close(_fd);
-    _ksetlsClose(_fd);
-    _connection_status = DISCONNECTED;
-}
 
 int DimSocket::bind_() {
     int result;
 
     // SOCKET OPEN
     if ( _server_fd = ::socket(AF_INET, SOCK_STREAM, 0); _server_fd == -1) {
-    //if ( _server_fd = ::socket(AF_INET, SOCK_DGRAM, 0); _server_fd == -1) { //udp
         throw std::runtime_error(strerror(errno));
     }
-
-    // // RCVTIMEO
-    // struct timeval tv;
-    // tv.tv_sec = 1;
-    // tv.tv_usec = 0;
-    // setsockopt(_server_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     _server_addr.sin_family = AF_INET;
     _server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -108,27 +110,31 @@ int DimSocket::bind_() {
 
 int DimSocket::listen() {
     int result;
-    char sIpAddress[40];
-    unsigned int client_addr_len = sizeof(_addr);
 
-    // LISTEN AND ACCEPT
     result = ::listen(_server_fd, 10);
     if (result < 0) {
         std::cout << "::listen() : Fail " << result << std::endl;
-        // close(); // TODO resolve Aborted (core dumped)
-        throw std::runtime_error(strerror(errno));
     }
 
+    return result;
+}
+
+int DimSocket::accept() {
+    int result;
+    char sIpAddress[40];
+    unsigned int client_addr_len = sizeof(_addr);
+
+    _connection_status = DISCONNECTED;
+
     std::cout << "Wait for client.\r\n"  << std::endl;
-    _fd = accept(_server_fd,
+    _fd = ::accept(_server_fd,
                  reinterpret_cast<struct sockaddr *>(&_addr),
                  &client_addr_len);
 
     if (_fd < 0)
     {
-        std::cout << "::accept() : Fail " << result << std::endl;
-        // close(); // TODO resolve Aborted (core dumped)
-        throw std::runtime_error(strerror(errno));
+        std::cout << "::accept() : Fail " << _fd << std::endl;
+	return _fd;
     }
 
     inet_ntop(AF_INET, &_addr.sin_addr.s_addr, sIpAddress,
@@ -140,7 +146,6 @@ int DimSocket::listen() {
     if (result == KSE_SUCCESS) {
         std::cout << "_kseTlsOpen() : Success " << result << std::endl;
     } else {
-
         std::cout << "_kseTlsOpen() : Fail " << result << std::endl;
         throw std::runtime_error(strerror(errno));
     }
@@ -153,33 +158,22 @@ int DimSocket::listen() {
         std::cout << "_ksetlsTlsServerHandshake() : Fail " << result << std::endl;
     }
 
-    // if (handshake() == -1 ) {
-    //     close(); // TODO resolve Aborted (core dumped)
-    //     throw std::runtime_error(strerror(errno));
-    // }
-
     _connection_status = CONNECTED;
-
+    _tls_read_error = 0; // NO TLS ERROR
+    _tls_write_error = 0; // NO TLS ERROR
     return result;
 }
 
 int DimSocket::connect() {
-    if (_connection_status == CONNECTED) {
-        disconnect();
-        std::cout << "new connect()" << std::endl;
-    }
+    // if (_connection_status == CONNECTED) {
+    //     close();
+    //     std::cout << "new connect()" << std::endl;
+    // }
 
     // SOCKET OPEN
     if ( _fd = ::socket(PF_INET, SOCK_STREAM, 0); _fd == -1) {
-      //if ( _fd = ::socket(PF_INET, SOCK_DGRAM, 0); _fd == -1) { // udp
         throw std::runtime_error(strerror(errno));
     }
-
-    // // RCVTIMEO
-    // struct timeval tv;
-    // tv.tv_sec = 1;
-    // tv.tv_usec = 0;
-    // setsockopt(_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     _addr.sin_family = AF_INET;
     _addr.sin_addr.s_addr = inet_addr(SERVER_IP);
@@ -192,11 +186,12 @@ int DimSocket::connect() {
                        sizeof(_addr));
 
     if (result == 0) {
-        // std::cout << "::connect() : Success " << result << std::endl;
+        std::cout << "::connect() : Success " << result << std::endl;
     } else {
         std::cout << "::connect() : Fail " << result << std::endl;
-        close(); // TODO resolve Aborted (core dumped)
-        throw std::runtime_error(strerror(errno));
+        // close(); // TODO resolve Aborted (core dumped)
+        return result;
+        // throw std::runtime_error(strerror(errno));
     }
     // TLS OPEN
     result = _ksetlsOpen(_fd, KSETLS_MODE_TLS, KSETLS_CLIENT, 1, 0, 0, SESSION);
@@ -205,15 +200,20 @@ int DimSocket::connect() {
     } else {
         std::cout << "_kseTlsOpen() : Fail " << result << std::endl;
         // close(); // TODO resolve Aborted (core dumped)
-        throw std::runtime_error(strerror(errno));
+        return result;
+        // throw std::runtime_error(strerror(errno));
     }
-
-    if (handshake() == -1 ) {
+    result = handshake();
+    if ( result < 0 ) {
         // close(); // TODO resolve Aborted (core dumped)
-        throw std::runtime_error(strerror(errno));
+        // throw std::runtime_error(strerror(errno));
+        return result;
+        // throw std::runtime_error(strerror(errno));
     }
 
     _connection_status = CONNECTED;
+    _tls_read_error = 0; // NO TLS ERROR
+    _tls_write_error = 0; // NO TLS ERROR
 
     return result;
 }
@@ -221,12 +221,14 @@ int DimSocket::connect() {
 int DimSocket::handshake() {
     int result = _ksetlsTlsClientHandshake(_fd, _handshake_type);
     if (result == KSE_SUCCESS) {
-        _handshake_type = KSETLS_ABBR_HANDSHAKE;
+        _handshake_type = KSETLS_ABBR_HANDSHAKE; // TOOD
+        // _handshake_type = KSETLS_FULL_HANDSHAKE;
         std::cout << "_ksetlsTlsClientHandshake() : Success " << result << std::endl;
     } else {
         std::cout << "_ksetlsTlsClientHandshake() : Fail " << result << std::endl;
-        return -1;
+        return result;
     }
+
     return 0;
 }
 
@@ -238,87 +240,115 @@ void DimSocket::init_poll() {
     fds[1].fd = _server_fd;
 }
 
+bool DimSocket::is_writing() {
+    return on_write;
+}
+
+bool DimSocket::is_reading() {
+    return on_read;
+}
+
 auto DimSocket::send(uint16_t size, uint8_t* data) -> int {
+    int result = 0;
+
     if (_connection_status != CONNECTED)
     {
         std::cout << "[DimSocket] send failed : not connected to a server." << std::endl;
         return -1;
     }
-    int result = -1;
 
-    // std::cout << "before dim write 0 " << std::endl;
-    while (on_read){
-    };
+    if (_tls_read_error == -1) // HAS TLS ERROR?
+    {
+        // printf("\nDimSocket::send CHECK TLS ERROR\n");
+        return 0;
+    }
 
+    while (on_read){};
+
+    if (_tls_read_error == -1) // HAS TLS ERROR?
+    {
+        // printf("\nDimSocket::send CHECK TLS ERROR\n");
+        return 0;
+    }
+
+    // printf("\nDimSocket::send before mutex lock\n");
     // pthread_mutex_lock(&lock);
     on_write = true;
-    //    pthread_cond_wait(&send_cond, &lock);
-    // std::cout << "before dim write 1 " << std::endl;
-    if(size > 2048) {
-        result = _ksetlsTlsWrite(_fd, data, 2048);
-        if (result < 0) {
-            std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
-            return -1;
-        }
-        result = _ksetlsTlsWrite(_fd, data+2048, size-2048);
-        if (result < 0) {
-            std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
-            return -1;
-        }
-        return 0;
-    } else {
+
+    // if(size > 2048) {
+    //     printf("\nDimSocket::send0\n");
+    //     result = _ksetlsTlsWrite(_fd, data, 2048);
+    //     if (result < 0) {
+    //         std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+    //         return -1;
+    //     }
+    //     result = _ksetlsTlsWrite(_fd, data+2048, size-2048);
+    //     on_write = false;
+    //     if (result < 0) {
+    //         std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
+    //         return -1;
+    //     }
+    // } else
+    {
+        // printf("\nDimSocket::send0\n");
         result = _ksetlsTlsWrite(_fd, data, size);
+        on_write = false;
         if (result < 0) {
             std::cout << "_ksetlsTlsWrite() : Fail " << result <<  " " << size << std::endl;
-            return -1;
+            _tls_write_error = -1;
+        } else {
+            _tls_write_error = 0;
         }
     }
+    // printf("\nDimSocket::send1 %d\n", result);
     on_write = false;
-    // std::cout << "after dim write " << std::endl;
     // pthread_mutex_unlock(&lock);
-    //pthread_cond_signal(&recv_cond);
-
-    return 0;
-}
-
-auto DimSocket::recv(int16_t* size, uint8_t* data) -> int {
-   if (_connection_status != CONNECTED)
-   {
-      std::cout << "[DimSocket] recv failed : not connected to a server." << std::endl;
-      return -1;
-   }
-   int result = -1;
-   // pthread_mutex_lock(&lock);
-   // while(on_write) {
-   //      printf("-");
-   // }
-   //std::cout << "before dim read 0" << std::endl;
-   on_read = true;
-   //   std::cout << "before dim read 1" << std::endl;
-   //pthread_cond_wait(&recv_cond, &lock);
-   if (poll(fds, 1, 30) > 0 && !on_write) {
-       //       std::cout << "poll fds" << std::endl;
-       if (fds[0].revents & POLLIN) {
-           // std::cout << "poll before tls read" << std::endl;
-           // result = _ksetlsTlsRead(data, size, _fd);
-           result = _ksetlsTlsRead(data, size, fds[0].fd);
-           // std::cout << "poll after tls read" << std::endl;
-       }
-   }
-
-   // on_read = true;
-   // result = _ksetlsTlsRead(data, size, _fd);
-
-   //   std::cout << "after dim read " << std::endl;
-   on_read = false;
-   // pthread_mutex_unlock(&lock);
-   //pthread_cond_signal(&send_cond);
+    // printf("\nDimSocket::send after mutex lock\n");
 
     return result;
 }
 
-void DimSocket::close() {
-    int result = -1;
+auto DimSocket::recv(int16_t* size, uint8_t* data) -> int {
+   int result = 0;
+
+   if (_connection_status != CONNECTED)
+   {
+       std::cout << "[DimSocket] recv failed : not connected to a server." << std::endl;
+       return -1;
+   }
+
+    // if (_tls_write_error == -1) // HAS TLS ERROR?
+    // {
+    //     printf("\nDimSocket::send CHECK TLS ERROR\n");
+    //     return 0;
+    // }
+
+   // printf("\nDimSocket::recv before mutex lock\n");
+   // pthread_mutex_lock(&lock);
+   on_read = true;
+   // if (poll(fds, 1, 30) > 0 && !on_write) {
+   if (poll(fds, 1, 3) > 0 && !on_write) {
+       if (fds[0].revents & POLLIN) {
+           // result = _ksetlsTlsRead(data, size, _fd);
+           // printf("\nDimSocket::recv0\n");
+           result = _ksetlsTlsRead(data, size, fds[0].fd);
+           // printf("\nDimSocket::recv1 %d, %d\n", result, *size);
+           if (result < 0) {
+               std::cout << "_ksetlsTlsRead() : Fail " << result <<  " " << *size << std::endl;
+               _tls_read_error = -1;
+           } else {
+               _tls_read_error = 0;
+           }
+       }
+   }
+   on_read = false;
+   // pthread_mutex_unlock(&lock);
+   // printf("\nDimSocket::recv after mutex lock\n");
+   return result;
+}
+
+int DimSocket::tls_close_notify() {
+    int result = 0;
 
     result = _ksetlsTlsCloseNotify(_fd);
     if (result < 0) {
@@ -326,6 +356,36 @@ void DimSocket::close() {
     } else {
         std::cout << "_ksetlsTlsCloseNotify() : Success " << result << std::endl;
     }
+    return result;
+}
+
+int DimSocket::tls_close() {
+
+    int result = 0;
+    result = _ksetlsClose(_fd);
+    if (result < 0) {
+        std::cout << "_ksetlsClose() : Fail " << result << std::endl;
+    } else {
+        std::cout << "_ksetlsClose() : Success " << result << std::endl;
+    }
+    return result;
+}
+
+int DimSocket::close() {
+    int result = 0;
+    _connection_status = DISCONNECTED;
+
+    // result = tls_close_notify(); //TODO
+
+    ::close(_fd);
+    printf("Client disconnected.\r\n");
+
+    result = tls_close();
+    return result;
+}
+
+void DimSocket::power_off() {
+    int result = 0;
 
     result = _ksePowerOff();
     if (result < 0) {
@@ -333,6 +393,4 @@ void DimSocket::close() {
     } else {
         std::cout << "_ksePowerOff() : Success " << result << std::endl;
     }
-
-    disconnect();
 }
