@@ -256,7 +256,6 @@ void* start_gcs_read_thread(void *args)
                 no_data_count = 0;
                 break;
             }
-            continue;
         } else { // ON DATA
             printf("\r\NO DATA: %d\r\n", no_data_count);
             no_data_count = 0;
