@@ -21,6 +21,8 @@
 //#define SERVER_IP "192.168.88.26"
 #define SERVER_IP "10.243.61.157"
 
+#define DIM_TIMEOUT 10
+
 namespace dronemap
 {
     class DimSocket
@@ -108,10 +110,10 @@ namespace dronemap
 
         void init_poll();
 
-        auto descriptor() const
+        auto descriptor()
         { return _fd; }
 
-        auto poll_descriptor() const
+        auto poll_descriptor()
         { return fds; }
 
 

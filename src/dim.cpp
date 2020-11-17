@@ -234,6 +234,7 @@ int DimSocket::handshake() {
 
 void DimSocket::init_poll() {
     memset(fds, 0, sizeof(fds));
+
     fds[0].events = POLLIN;
     fds[0].fd = _fd;
     fds[1].events = POLLIN;
@@ -327,7 +328,7 @@ auto DimSocket::recv(int16_t* size, uint8_t* data) -> int {
    // pthread_mutex_lock(&lock);
    on_read = true;
    // if (poll(fds, 1, 30) > 0 && !on_write) {
-   if (poll(fds, 1, 3) > 0 && !on_write) {
+   if (poll(fds, 1, DIM_TIMEOUT) > 0 && !on_write) {
        if (fds[0].revents & POLLIN) {
            // result = _ksetlsTlsRead(data, size, _fd);
            // printf("\nDimSocket::recv0\n");
