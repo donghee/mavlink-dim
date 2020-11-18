@@ -88,7 +88,6 @@ void gcs_read_message() {
 }
 
 
-
 int autopilot_write_message() {
     int result = 0;
     uint8_t send_buffer[BUFFER_LENGTH];
@@ -97,8 +96,9 @@ int autopilot_write_message() {
     mavlink_message_t message;
 
     // Fully-blocking
-    q_to_autopilot.wait_dequeue(message);
-    // if (q_to_autopilot.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
+    // q_to_autopilot.wait_dequeue(message);
+    // if (q_to_autopilot.wait_dequeue_timed(message, std::chrono::milliseconds(1)))
+    if (q_to_autopilot.wait_dequeue_timed(message, std::chrono::microseconds(10)))
     {
         printf("Received message from gcs with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
 
@@ -151,6 +151,8 @@ int autopilot_read_message() {
   return 1;
 }
 
+
+
 void gcs_write_message() {
     uint8_t send_buffer[BUFFER_LENGTH];
     int16_t send_size;
@@ -188,11 +190,11 @@ void* start_autopilot_write_thread(void *args)
             result = autopilot_write_message();
             if (result < 0) {
                 printf("\r\nSEND ERROR: %X\r\n", result);
-                // LAST CHANGE
                 result = dim->close();
                 break;
             }
-            usleep(1000000); // 1hz
+            // usleep(1000000); // 1hz
+            usleep(100000); // 10hz
         }
     }
     printf("\r\nExit autopilot write thread\r\n");
@@ -254,6 +256,64 @@ void* start_gcs_write_thread(void *args)
   return NULL;
 }
 
+void* start_autopilot_read_write_thread(void *args) {
+    struct pollfd *fds;
+    int result = 0;
+
+    while(run) {
+        dim->init_poll();
+        while(1) {
+            fds = dim->poll_descriptor();
+            if (poll(fds, 1, DIM_TIMEOUT) > 0) {
+                if(fds[0].revents & (POLLNVAL|POLLERR|POLLHUP)){
+                    printf("\r\n POLL ERRORS\r\n");
+                    result = dim->close();
+                    dim->connect();
+                    break;
+                }
+                if(fds[0].revents & POLLIN) {
+                    result = autopilot_read_message();
+                    if (result < 0) {
+                        if (result == -0x7880) {
+                            printf("\r\nGot KSETLS_ERROR_TLS_PEER_CLOSE_NOTIFY\r\n");
+                            // sleep(1);
+                            result = dim->close();
+                            dim->connect();
+                            continue;
+                        } else if (result == -0x7780) {
+                            printf("\r\nGot KSETLS_ERROR_TLS_FATAL_ALERT_MESSAGE\r\n");
+                        } else if (result == -1) {
+                            printf("\r\nREAD ERROR: %X\r\n", result);
+                            printf("\r\nTry dim->connect\r\n");
+                            // sleep(1);
+                            result = dim->close();
+                            dim->connect();
+                            printf("\r\nContinue to read message\r\n");
+                            break;
+                        } else {
+                            printf("\r\nREAD ERROR: %X\r\n", result);
+                            sleep(1);
+                            result = dim->close();
+                            dim->connect();
+                            break;
+                        }
+                    }
+                }
+                // if(fds[0].revents & POLLOUT) {
+                    result = autopilot_write_message();
+                    if (result < 0) {
+                        printf("\r\nSEND ERROR: %X\r\n", result);
+                        result = dim->close();
+                        break;
+                    }
+                    usleep(10);
+                // }
+            }
+        }
+    }
+    return NULL;
+}
+
 
 int main(int argc, const char *argv[])
 {
@@ -292,8 +352,10 @@ int main(int argc, const char *argv[])
   int result;
   pthread_t autopilot_read_tid, gcs_write_tid, gcs_read_tid, autopilot_write_tid;
 
-  result = pthread_create( &autopilot_read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
-  if ( result ) throw result;
+  pthread_t autopilot_read_write_tid;
+
+  // result = pthread_create( &autopilot_read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
+  // if ( result ) throw result;
 
   result = pthread_create( &gcs_write_tid, NULL, &start_gcs_write_thread, (char*)"GCS Writing" );
   if ( result ) throw result;
@@ -301,14 +363,18 @@ int main(int argc, const char *argv[])
   result = pthread_create( &gcs_read_tid, NULL, &start_gcs_read_thread, (char*)"GCS Reading" );
   if ( result ) throw result;
 
-  result = pthread_create( &autopilot_write_tid, NULL, &start_autopilot_write_thread, (char*)"Autopilot Writing" );
+  // result = pthread_create( &autopilot_write_tid, NULL, &start_autopilot_write_thread, (char*)"Autopilot Writing" );
+  // if ( result ) throw result;
+
+  result = pthread_create( &autopilot_read_write_tid, NULL, &start_autopilot_read_write_thread, (char*)"Autopilot Read Write" );
   if ( result ) throw result;
 
   // wait for exit
-  pthread_join(autopilot_read_tid, NULL);
+  // pthread_join(autopilot_read_tid, NULL);
   pthread_join(gcs_write_tid, NULL);
   pthread_join(gcs_read_tid, NULL);
-  pthread_join(autopilot_write_tid, NULL);
+  // pthread_join(autopilot_write_tid, NULL);
+  pthread_join(autopilot_read_write_tid, NULL);
 
   dim->close();
 

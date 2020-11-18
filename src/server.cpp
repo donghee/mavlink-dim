@@ -61,7 +61,7 @@ void autopilot_read_message() {
         if (result > 0) {
             if (
             // message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
-            // message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
+            message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
             message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
             message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
             message.msgid == MAVLINK_MSG_ID_SERVO_OUTPUT_RAW ||
@@ -73,7 +73,9 @@ void autopilot_read_message() {
             message.msgid == MAVLINK_MSG_ID_SCALED_IMU ||
             message.msgid == MAVLINK_MSG_ID_SCALED_IMU2 ||
             message.msgid == MAVLINK_MSG_ID_ACTUATOR_CONTROL_TARGET ||
-            // message.msgid == MAVLINK_MSG_ID_ODOMETRY ||
+            message.msgid == MAVLINK_MSG_ID_ODOMETRY ||
+            message.msgid == MAVLINK_MSG_ID_EXTENDED_SYS_STATE ||
+            message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS ||
             message.msgid == MAVLINK_MSG_ID_ALTITUDE )  {
                 continue;
             }
@@ -98,10 +100,12 @@ int gcs_write_message() {
     mavlink_message_t message;
     mavlink_sys_status_t sys_status;
     // mavlink_auth_key_t auth_key;
+    
+    memset(send_buffer, 0, BUFFER_LENGTH);
 
     // Fully-blocking
-    q_to_gcs.wait_dequeue(message);
-    // if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
+    // q_to_gcs.wait_dequeue(message);
+    if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
     {
         /*
         // Modify sys status
@@ -142,6 +146,8 @@ int gcs_read_message() {
     uint8_t recv_buffer[BUFFER_LENGTH];
     int16_t recv_size;
 
+    memset(recv_buffer, 0, BUFFER_LENGTH);
+
     while(!received && dim->is_connected()) {
         result = dim->recv(&recv_size, recv_buffer);
         if (result > 0) {
@@ -174,10 +180,11 @@ void autopilot_write_message() {
 
     mavlink_message_t message;
 
+    memset(recv_buffer, 0, BUFFER_LENGTH);
+
     // Fully-blocking
-    q_to_autopilot.wait_dequeue(message);
-    // Blocking with timeout
-    // if (q_to_autopilot.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
+    // q_to_autopilot.wait_dequeue(message);
+    if (q_to_autopilot.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
     {
         printf("Received message from gcs with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
         // debug
@@ -248,16 +255,19 @@ void* start_gcs_read_thread(void *args)
         }
         if (result == 0) { // NO DATA
             no_data_count += 1;
-            if (no_data_count > 10000) {
-                printf("\r\NO DATA: %d\r\n", no_data_count);
-                sleep(1);
+            //if (no_data_count > 10000) {
+            //if (no_data_count > 1000) {
+            if (no_data_count > 5000) {
+                // printf("Timeout: %d\r\n", no_data_count);
+                // sleep(1);
+                usleep(100000); // 0.1s
                 result = dim->tls_close_notify();
                 dim->close();
                 no_data_count = 0;
                 break;
             }
         } else { // ON DATA
-            printf("\r\NO DATA: %d\r\n", no_data_count);
+            printf("Timeout: %d\r\n", no_data_count);
             no_data_count = 0;
         }
         usleep(10);
@@ -273,21 +283,20 @@ void* start_autopilot_write_thread(void *args)
         autopilot_write_message();
         usleep(1000); // 1000hz
         //usleep(100000); // 10hz
-      //usleep(10); // test
   }
   printf("\r\nExit autopilot write thread\r\n");
   return NULL;
 }
-
 
 int main(int argc, const char *argv[])
 {
   int result;
   pthread_t autopilot_read_tid, gcs_read_tid, gcs_write_tid, autopilot_write_tid;
 
-  // signal(SIGINT, exit_app);
+  signal(SIGINT, exit_app);
 
-  port = new Serial_Port("/dev/ttyACM0", 57600);
+  //port = new Serial_Port("/dev/ttyACM0", 57600);
+  port = new Serial_Port("/dev/ttyS0", 921600);
   port->start();
 
   try {
