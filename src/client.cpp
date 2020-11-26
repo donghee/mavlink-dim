@@ -276,10 +276,10 @@ void* start_autopilot_read_write_thread(void *args) {
                     if (result < 0) {
                         if (result == -0x7880) {
                             printf("\r\nGot KSETLS_ERROR_TLS_PEER_CLOSE_NOTIFY\r\n");
-                            // sleep(1);
+                            sleep(1);
                             result = dim->close();
                             dim->connect();
-                            continue;
+                            break;
                         } else if (result == -0x7780) {
                             printf("\r\nGot KSETLS_ERROR_TLS_FATAL_ALERT_MESSAGE\r\n");
                         } else if (result == -1) {
