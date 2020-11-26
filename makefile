@@ -6,7 +6,7 @@ CCFLAGS = -g
 
 BIN	:= bin
 SRC := src
-INCLUDE := -I kse_dim -I src -I c_library_v2/standard
+INCLUDE := -I kse_dim -I src -I include -I c_library_v2/standard
 LIB	:= .
 LIBRARIES	:= -lusb-1.0  -lpthread -L.
 
@@ -31,9 +31,14 @@ git_submodule:
 	git submodule update --init --recursive
 
 clean:
-	 rm -rf *.o *.a mavlink_dim mavlink_dim_server
+	rm -rf *.o *.a mavlink_dim mavlink_dim_server
 
 format:
 	astyle --options=./astylerc --preserve-date src/*.cpp
+
+doxygen:
+	doxygen Doxyfile
+	./node_modules/.bin/moxygen --output api.md doc/xml/
+	# pandoc -f markdown -t org -o api.org api.md
 
 # https://stackoverflow.com/questions/26578200/is-there-a-way-to-further-shorten-and-generalize-this-makefile/26579143#26579143
