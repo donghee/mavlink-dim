@@ -60,7 +60,7 @@ void autopilot_read_message() {
         result = port->read_message(message);
         if (result > 0) {
             if (
-            // message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
+            message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
             message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
             message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
             message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
@@ -105,7 +105,7 @@ int gcs_write_message() {
 
     // Fully-blocking
     // q_to_gcs.wait_dequeue(message);
-    if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
+    if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(1)))
     {
         /*
         // Modify sys status
@@ -184,7 +184,7 @@ void autopilot_write_message() {
 
     // Fully-blocking
     // q_to_autopilot.wait_dequeue(message);
-    if (q_to_autopilot.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
+    if (q_to_autopilot.wait_dequeue_timed(message, std::chrono::milliseconds(1)))
     {
         printf("Received message from gcs with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
         // debug
@@ -244,7 +244,8 @@ void* start_gcs_read_thread(void *args)
                 continue;
             } else if (result == -0x7780) {
                 printf("\r\nGot KSETLS_ERROR_TLS_FATAL_ALERT_MESSAGE\r\n");
-                sleep(1);
+                //sleep(1);
+                usleep(100000); // 0.1s
                 result = dim->tls_close_notify();
                 dim->close();
                 break;
