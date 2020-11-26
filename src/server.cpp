@@ -1,21 +1,4 @@
-#include <iostream>
-#include <thread>
-
-#include <string.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include <dim.h>
-#include <signal.h>
-#include <serial_port.h>
-
-#define BUFFER_LENGTH 8192
-
-#include "readerwriterqueue.h"
-
-using namespace dronemap;
+#include "server.h"
 
 moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_gcs;
 moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
@@ -66,23 +49,23 @@ void autopilot_read_message()
 
     if (result > 0) {
       if (
-        message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
-        message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
-        message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
-        message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
-        message.msgid == MAVLINK_MSG_ID_SERVO_OUTPUT_RAW ||
-        message.msgid == MAVLINK_MSG_ID_HIGHRES_IMU ||
-        message.msgid == MAVLINK_MSG_ID_TIMESYNC ||
-        message.msgid == MAVLINK_MSG_ID_VFR_HUD ||
-        message.msgid == MAVLINK_MSG_ID_VIBRATION ||
-        message.msgid == MAVLINK_MSG_ID_ESTIMATOR_STATUS ||
-        message.msgid == MAVLINK_MSG_ID_SCALED_IMU ||
-        message.msgid == MAVLINK_MSG_ID_SCALED_IMU2 ||
-        message.msgid == MAVLINK_MSG_ID_ACTUATOR_CONTROL_TARGET ||
-        message.msgid == MAVLINK_MSG_ID_ODOMETRY ||
-        message.msgid == MAVLINK_MSG_ID_EXTENDED_SYS_STATE ||
-        message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS ||
-        message.msgid == MAVLINK_MSG_ID_ALTITUDE)  {
+              message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
+              message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
+              message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
+              message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
+              message.msgid == MAVLINK_MSG_ID_SERVO_OUTPUT_RAW ||
+              message.msgid == MAVLINK_MSG_ID_HIGHRES_IMU ||
+              message.msgid == MAVLINK_MSG_ID_TIMESYNC ||
+              message.msgid == MAVLINK_MSG_ID_VFR_HUD ||
+              message.msgid == MAVLINK_MSG_ID_VIBRATION ||
+              message.msgid == MAVLINK_MSG_ID_ESTIMATOR_STATUS ||
+              message.msgid == MAVLINK_MSG_ID_SCALED_IMU ||
+              message.msgid == MAVLINK_MSG_ID_SCALED_IMU2 ||
+              message.msgid == MAVLINK_MSG_ID_ACTUATOR_CONTROL_TARGET ||
+              message.msgid == MAVLINK_MSG_ID_ODOMETRY ||
+              message.msgid == MAVLINK_MSG_ID_EXTENDED_SYS_STATE ||
+              message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS ||
+              message.msgid == MAVLINK_MSG_ID_ALTITUDE)  {
         continue;
       }
 

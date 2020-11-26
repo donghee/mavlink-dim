@@ -1,3 +1,4 @@
+
 #ifndef DIM_H
 #define DIM_H
 
@@ -25,6 +26,11 @@
 
 namespace dronemap
 {
+  /**
+   * \class DimSocket
+   * \brief Provies DIM socket interface for TLS Handshake and encryption and decryption using DIM
+   */
+
     class DimSocket
     {
     private:

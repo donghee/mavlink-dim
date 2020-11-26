@@ -1,21 +1,9 @@
-#include <iostream>
-#include <thread>
+/*
+ * TCP TLS client code for communication MAVLink endpoints
+ * Author: Donghee Park
+*/
 
-#include <string.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include <dim.h>
-#include <signal.h>
-
-#include <mavlink.h>
-#include <sys/time.h>
-
-#define BUFFER_LENGTH 8192
-
-#include "readerwriterqueue.h"
+#include "client.h"
 
 using namespace dronemap;
 
@@ -50,6 +38,12 @@ uint64_t microsSinceEpoch()
 
   return micros;
 }
+
+/*! print mavlink bytes for debugging
+ * @param buffer bytes to print
+ * @param size of bytes to print
+ * @return
+ */
 
 void debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size)
 {
