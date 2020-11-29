@@ -1,49 +1,25 @@
-/*
- * TCP TLS client code for communication MAVLink endpoints
- * Author: Donghee Park
-*/
-
 #include "client.h"
 
-moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_gcs;
-moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
+MAVLinkTlsClient *g_client;
 
-static volatile sig_atomic_t run = 1;
-static DimSocket *dim;
-static volatile int dim_writing_status = 0;
+static void signal_exit(int signum)
+{
+  std::cout << "Caught signal " << signum << std::endl;
+  g_client->exit(signum);
+}
 
-static struct sockaddr_in gcAddr;
-static struct sockaddr_in locAddr;
-static int sock;
-static bool first_run = false;
-
-void exit_app(int signum)
+void
+MAVLinkTlsClient::exit(int signum)
 {
   run = 0;
-  std::cout << "Caught signal " << signum << std::endl;
+
   dim->close();
   dim->power_off();
-  exit(1);
+  ::exit(1);
 }
 
-uint64_t microsSinceEpoch()
-{
-  struct timeval tv;
-  uint64_t micros = 0;
-
-  gettimeofday(&tv, NULL);
-  micros = ((uint64_t)tv.tv_sec) * 1000000 + tv.tv_usec;
-
-  return micros;
-}
-
-/*! print mavlink bytes for debugging
- * @param buffer bytes to print
- * @param size of bytes to print
- * @return
- */
-
-void debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size)
+void
+MAVLinkTlsClient::debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size)
 {
   printf("MAVLink Buffer: 0x");
 
@@ -57,7 +33,8 @@ void debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size)
 }
 
 // gcs -> autopilot
-void gcs_read_message()
+void
+MAVLinkTlsClient::gcs_read_message()
 {
   uint8_t recv_buffer[BUFFER_LENGTH];
   int16_t recv_size;
@@ -85,7 +62,8 @@ void gcs_read_message()
 }
 
 
-int autopilot_write_message()
+int
+MAVLinkTlsClient::autopilot_write_message()
 {
   int result = 0;
   uint8_t send_buffer[BUFFER_LENGTH];
@@ -118,7 +96,8 @@ int autopilot_write_message()
 }
 
 // autopilot -> qgc
-int autopilot_read_message()
+int
+MAVLinkTlsClient::autopilot_read_message()
 {
   int result;
   uint8_t recv_buffer[BUFFER_LENGTH];
@@ -157,7 +136,8 @@ int autopilot_read_message()
 
 
 
-void gcs_write_message()
+void
+MAVLinkTlsClient::gcs_write_message()
 {
   uint8_t send_buffer[BUFFER_LENGTH];
   int16_t send_size;
@@ -177,7 +157,8 @@ void gcs_write_message()
 }
 
 // read and write
-void *start_gcs_read_thread(void *args)
+void *
+MAVLinkTlsClient::start_gcs_read_thread(void *args)
 {
   while (run) {
     gcs_read_message();
@@ -188,7 +169,8 @@ void *start_gcs_read_thread(void *args)
   return NULL;
 }
 
-void *start_autopilot_write_thread(void *args)
+void *
+MAVLinkTlsClient::start_autopilot_write_thread(void *args)
 {
   int result = 0;
 
@@ -212,7 +194,8 @@ void *start_autopilot_write_thread(void *args)
 }
 
 // read and write
-void *start_autopilot_read_thread(void *args)
+void *
+MAVLinkTlsClient::start_autopilot_read_thread(void *args)
 {
   int result = 0;
 
@@ -265,7 +248,8 @@ void *start_autopilot_read_thread(void *args)
   return NULL;
 }
 
-void *start_gcs_write_thread(void *args)
+void *
+MAVLinkTlsClient::start_gcs_write_thread(void *args)
 {
   while (run) {
     gcs_write_message();
@@ -276,7 +260,8 @@ void *start_gcs_write_thread(void *args)
   return NULL;
 }
 
-void *start_autopilot_read_write_thread(void *args)
+void *
+MAVLinkTlsClient::start_autopilot_read_write_thread(void *args)
 {
   struct pollfd *fds;
   int result = 0;
@@ -301,7 +286,6 @@ void *start_autopilot_read_write_thread(void *args)
           if (result < 0) {
             if (result == -0x7880) {
               printf("\r\nGot KSETLS_ERROR_TLS_PEER_CLOSE_NOTIFY\r\n");
-              sleep(1);
               result = dim->close();
               dim->connect();
               break;
@@ -346,64 +330,36 @@ void *start_autopilot_read_write_thread(void *args)
   return NULL;
 }
 
+typedef void * (*THREADFUNCPTR)(void *);
 
-int main(int argc, const char *argv[])
-{
-  char target_ip[100];
-  sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-  strcpy(target_ip, "127.0.0.1");
-
-  memset(&locAddr, 0, sizeof(locAddr));
-  locAddr.sin_family = AF_INET;
-  locAddr.sin_addr.s_addr = INADDR_ANY;
-  locAddr.sin_port = htons(14551);
-
-  /* Bind the socket to port 14551 - necessary to receive packets from qgroundcontrol */
-  if (-1 == bind(sock, (struct sockaddr *)&locAddr, sizeof(struct sockaddr))) {
-    std::cout << "bind fail " << std::endl;
-    close(sock);
-    return -1;
-  }
-
-  if (fcntl(sock, F_SETFL, O_NONBLOCK | O_ASYNC) < 0)
-
-    // QGC
-  {
-    memset(&gcAddr, 0, sizeof(gcAddr));
-  }
-
-  gcAddr.sin_family = AF_INET;
-  gcAddr.sin_addr.s_addr = inet_addr(target_ip);
-  gcAddr.sin_port = htons(14550);
-
-  signal(SIGINT, exit_app);
-
-  // dim
-  dim = new DimSocket(4433);
-
+int
+start_client_threads(int _sock, DimSocket *dim) {
   // pthread
   int result;
   pthread_t autopilot_read_tid, gcs_write_tid, gcs_read_tid, autopilot_write_tid;
-
   pthread_t autopilot_read_write_tid;
+
+  MAVLinkTlsClient *client;
+  client = new MAVLinkTlsClient(_sock, dim);
+  g_client = client;
+
+  signal(SIGINT, signal_exit);
 
   // result = pthread_create( &autopilot_read_tid, NULL, &start_autopilot_read_thread, (char*)"Autopilot Reading" );
   // if ( result ) throw result;
 
-  result = pthread_create(&gcs_write_tid, NULL, &start_gcs_write_thread, (char *)"GCS Writing");
+  result = pthread_create(&gcs_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_gcs_write_thread, client);
 
   if (result) { throw result; }
 
-  result = pthread_create(&gcs_read_tid, NULL, &start_gcs_read_thread, (char *)"GCS Reading");
+  result = pthread_create(&gcs_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_gcs_read_thread, client);
 
   if (result) { throw result; }
 
   // result = pthread_create( &autopilot_write_tid, NULL, &start_autopilot_write_thread, (char*)"Autopilot Writing" );
   // if ( result ) throw result;
 
-  result = pthread_create(&autopilot_read_write_tid, NULL, &start_autopilot_read_write_thread,
-                          (char *)"Autopilot Read Write");
+  result = pthread_create(&autopilot_read_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_autopilot_read_write_thread, client);
 
   if (result) { throw result; }
 
@@ -413,6 +369,20 @@ int main(int argc, const char *argv[])
   pthread_join(gcs_read_tid, NULL);
   // pthread_join(autopilot_write_tid, NULL);
   pthread_join(autopilot_read_write_tid, NULL);
+
+  return NULL;
+}
+
+int main(int argc, const char *argv[])
+{
+  int sock;
+  DimSocket *dim;
+
+  sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+  dim = new DimSocket(4433);
+
+  start_client_threads(sock, dim);
 
   dim->close();
 
