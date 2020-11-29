@@ -30,7 +30,7 @@
 
 /**
  * \class MAVLinkTlsClient
- * \brief MAVLink TLS Client.
+ * \brief MAVLink TLS Client for GCS. It connect with Autopilot and GCS using DIM TLS Socket.
  */
 class MAVLinkTlsClient
 {
