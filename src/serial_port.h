@@ -36,7 +36,7 @@
 
 /**
  * @file serial_port.h
- *
+ * @class Serial_Port *
  * @brief Serial interface definition
  *
  * Functions for opening, closing, reading and writing via serial ports
@@ -44,7 +44,7 @@
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
  * @author Jaycee Lock,    <jaycee.lock@gmail.com>
  * @author Lorenz Meier,   <lm@inf.ethz.ch>
- *
+ * @author Donghee Park,   <dongheepark@gmail.com>
  */
 
 #ifndef SERIAL_PORT_H_
@@ -93,7 +93,7 @@
 //   Serial Port Manager Class
 // ----------------------------------------------------------------------------------
 /*
- * Serial Port Class
+ * @class Serial_port
  *
  * This object handles the opening and closing of the offboard computer's
  * serial port over which we'll communicate.  It also has methods to write
@@ -105,14 +105,37 @@ class Serial_Port: public Generic_Port
 {
 
 public:
-
+   /**
+   * Serial_Port Class constructor.
+   * open serialport. create mutex and initilize object resources.
+   *
+   * @return
+   */
 	Serial_Port();
+
+   /**
+   * Serial_Port Class constructor.
+   * open serialport. create mutex and initilize object resources.
+   * @param uart_name_ file path of serial port to open (/dev/ttyS0)
+   * @param baudrate_ baudrate of serial port to open (9600)
+   * @return
+   */
 	Serial_Port(const char *uart_name_, int baudrate_);
+  /**
+   * Serial_Port Class deconstructor.
+   * close serialport. deinitialize object resources.
+   *
+   * @return
+   */
 	virtual ~Serial_Port();
 
 	int read_message(mavlink_message_t &message);
 	int write_message(const mavlink_message_t &message);
 
+  /**
+   * check serial port is open
+   * @return return 0 serial port is open, otherwise -1
+   */
 	bool is_running(){
 		return is_open;
 	}

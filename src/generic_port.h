@@ -37,6 +37,7 @@
 
 /**
  * @file generic_port.h
+ * @class Generic_Port
  *
  * @brief Generic interface definition
  *
@@ -78,12 +79,44 @@
 class Generic_Port
 {
 public:
+  /**
+   * Generic_Port Class constructor.
+   * @return
+   */
 	Generic_Port(){};
+  /**
+   * Generic_Port Class deconstructor.
+   * @return
+   */
 	virtual ~Generic_Port(){};
+  /**
+   * Generic_Port read_message interface.
+   * @param message result mavlink message
+   * @return return 0 read mavlink is successful, otherwise -1
+   */
 	virtual int read_message(mavlink_message_t &message)=0;
+  /**
+   * Generic_Port write_message interface.
+   * @param message to write mavlink message
+   * @return return 0 write mavlink is successful, otherwise -1
+   */
 	virtual int write_message(const mavlink_message_t &message)=0;
+  /**
+   * Generic_Port is_running interface.
+   * @return return 0 port is using, otherwise -1
+   */
 	virtual bool is_running()=0;
+  /**
+   * Generic_Port start interface.
+   * this function start thread for reading and writeing messages
+   * @return
+   */
 	virtual void start()=0;
+  /**
+   * Generic_Port stop interface.
+   * this function stop thread for reading and writeing messages
+   * @return
+   */
 	virtual void stop()=0;
 };
 

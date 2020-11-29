@@ -83,6 +83,10 @@ Serial_Port::
   pthread_mutex_destroy(&lock);
 }
 
+
+/**
+ * initialize variables
+ */
 void
 Serial_Port::
 initialize_defaults()
@@ -108,6 +112,11 @@ initialize_defaults()
 // ------------------------------------------------------------------------------
 //   Read from Serial
 // ------------------------------------------------------------------------------
+/**
+ * read serial port and make mavlink message
+ * @param message result mavlink message
+ * @return return 0 read mavlink is successful, otherwise -1
+ */
 int
 Serial_Port::
 read_message(mavlink_message_t &message)
@@ -183,6 +192,11 @@ read_message(mavlink_message_t &message)
 // ------------------------------------------------------------------------------
 //   Write to Serial
 // ------------------------------------------------------------------------------
+/**
+ * write mavlink message to serial port
+ * @param message to write mavlink message
+ * @return return 0 write mavlink is successful, otherwise -1
+ */
 int
 Serial_Port::
 write_message(const mavlink_message_t &message)
@@ -203,6 +217,7 @@ write_message(const mavlink_message_t &message)
 //   Open Serial Port
 // ------------------------------------------------------------------------------
 /**
+ * open serial port
  * throws EXIT_FAILURE if could not open the port
  */
 void
@@ -259,6 +274,9 @@ start()
 // ------------------------------------------------------------------------------
 //   Close Serial Port
 // ------------------------------------------------------------------------------
+/**
+ * close serial port
+ */
 void
 Serial_Port::
 stop()

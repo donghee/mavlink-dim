@@ -1,4 +1,3 @@
-
 #ifndef DIM_H
 #define DIM_H
 
@@ -7,8 +6,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <stdio.h>   // Standard input/output definitions
-#include <pthread.h> // This uses POSIX Threads
+#include <stdio.h>
+#include <pthread.h>
 
 #include <iostream>
 #include <stdexcept>
@@ -24,106 +23,134 @@
 
 #define DIM_TIMEOUT 10
 
-namespace dronemap
+/**
+ * \class DimSocket
+ * \brief Provies DIM socket interface for MAVLink TLS Handshake and encryption and decryption using DIM
+ */
+class DimSocket
 {
+ private:
+  /** data struct for DIM Hardware status. */
+  struct kse_power_t {
+    uint8_t abVer[3];
+    uint8_t abSerialNumber[8];
+    uint8_t bLifeCycle;
+    uint8_t bPinType;
+    uint8_t bMaxPinRetryCount;
+    uint16_t usMaxKcmvpKeyCount;
+    uint16_t usMaxCertKeyCount;
+    uint16_t usMaxIoDataSize;
+    uint16_t usInfoFileSize;
+  };
+
+  int _fd{};   /** client socket file descriptor */
+  int _server_fd{};   /** server socket file descriptor */
+  struct sockaddr_in _addr; /** client IP adress */
+  struct sockaddr_in _server_addr; /** server IP adress */
+  uint8_t _handshake_type; /** is full handshake or abbreviation handshake */
+
+  pthread_mutex_t  lock;   /** mutex lock */
+
+  enum SocketStatus {
+    CONNECTED,
+    DISCONNECTED
+  };
+
+  SocketStatus _connection_status{DISCONNECTED};
+
+  volatile bool on_read{false};
+  volatile bool on_write{false};
+
+  bool _bind = false;
+
+  int _tls_read_error = false;
+  int _tls_write_error = false;
+
+  //poll
+  struct pollfd fds[2];
+
+  /** print KSE DIM hardware state */
+  void show_kse_power_info(kse_power_t kse_power);
+
+ public:
+
   /**
-   * \class DimSocket
-   * \brief Provies DIM socket interface for TLS Handshake and encryption and decryption using DIM
+   * DimSocket Class constructor.
+   * initilize mutex lock and open socket
+   *
+   * @return
    */
+  explicit DimSocket(uint16_t port, bool bind = false) {
+    // init pthread mutex, cond
+    if (pthread_mutex_init(&lock, NULL)) {
+      printf("\n mutex init failed\n");
+      throw 1;
+    }
 
-    class DimSocket
-    {
-    private:
-        int _fd{};
-        int _server_fd{};
-        struct sockaddr_in _addr{};
-        struct sockaddr_in _server_addr{};
-        uint8_t _handshake_type;
-        pthread_mutex_t  lock;
-        pthread_cond_t send_cond;
-        pthread_cond_t recv_cond;
+    _bind = bind;
 
-        enum SocketStatus {
-             CONNECTED,
-             DISCONNECTED
-        };
+    try {
+      open(SERVER_IP, port, bind);
+    } catch (...) {
+      std::cout << " catch runtime error (dim open) " << std::endl;
+      close();
+      throw std::runtime_error(strerror(errno));
+    }
+  };
 
-        SocketStatus _connection_status{DISCONNECTED};
+  /**
+   * DimSocket Class deconstructor.
+   * destory mutex lock and socket.
+   *
+   * @return
+   */
+  ~DimSocket() {
+    pthread_mutex_destroy(&lock);
+    close();
+  };
 
-        volatile bool on_read{false};
-        volatile bool on_write{false};
+  void open(const char *ip, unsigned long port, bool bind = false);
+  int bind_();
+  int listen();
+  int accept();
+  int connect();
 
-        bool _bind = false;
+  /**
+   * check client is connected
+   *
+   * @return 0 if send client is connected, otherwise -1
+   */
+  bool is_connected() const { return _connection_status == CONNECTED; };
+  bool is_writing();
+  bool is_reading();
+  int handshake();
+  int send(uint16_t size, uint8_t* data);
+  int recv(int16_t* size, uint8_t* data);
+  int tls_close_notify();
+  int tls_close();
+  int close();
+  int power_off();
 
-        int _tls_read_error = false;
-        int _tls_write_error = false;
+  void init_poll();
 
-        //poll
-        struct pollfd fds[2];
-
-      public:
-        explicit DimSocket(uint16_t port, bool bind = false) {
-            // init pthread mutex, cond
-            if (pthread_mutex_init(&lock, NULL)) {
-                printf("\n mutex init failed\n");
-                throw 1;
-            }
-
-            if (pthread_cond_init(&send_cond, NULL)) {
-                printf("\n send_cond init failed\n");
-                throw 1;
-            }
-
-            if (pthread_cond_init(&recv_cond, NULL)) {
-                printf("\n recv_cond init failed\n");
-                throw 1;
-            }
-
-            _bind = bind;
-
-            try {
-                open(SERVER_IP, port, bind);
-            } catch (...) {
-                std::cout << " catch runtime error (dim open) " << std::endl;
-                close();
-                throw std::runtime_error(strerror(errno));
-            }
-        };
-
-        ~DimSocket() {
-            pthread_cond_destroy(&recv_cond);
-            pthread_cond_destroy(&send_cond);
-            pthread_mutex_destroy(&lock);
-            close();
-        };
-
-        void open(const char *ip, unsigned long port, bool bind = false);
-        int bind_();
-        int listen();
-        int accept();
-        int connect();
-
-        bool is_connected() const { return _connection_status == CONNECTED; };
-        bool is_writing();
-        bool is_reading();
-        int handshake();
-        int send(uint16_t size, uint8_t* data);
-        int recv(int16_t* size, uint8_t* data);
-        int tls_close_notify();
-        int tls_close();
-        int close();
-        void power_off();
-
-        void init_poll();
-
-        auto descriptor()
-        { return _fd; }
-
-        auto poll_descriptor()
-        { return fds; }
+  /**
+   * return client socket file descriptor
+   *
+   * @return client socket file descriptor
+   */
+  auto descriptor()
+  { return _fd; }
 
 
-    };
-}
+  /**
+   * return client and server file descriptor from init_poll() function
+   *
+   * @return array of file descriptors
+   */
+  auto poll_descriptor()
+  { return fds; }
+
+
+};
 
 #endif

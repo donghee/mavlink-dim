@@ -4,21 +4,7 @@ extern "C" {
 #include "kse_ubuntu.h"
 }
 
-using namespace dronemap;
-
-struct kse_power_t {
-  uint8_t abVer[3];
-  uint8_t abSerialNumber[8];
-  uint8_t bLifeCycle;
-  uint8_t bPinType;
-  uint8_t bMaxPinRetryCount;
-  uint16_t usMaxKcmvpKeyCount;
-  uint16_t usMaxCertKeyCount;
-  uint16_t usMaxIoDataSize;
-  uint16_t usInfoFileSize;
-};
-
-static void show_kse_power_info(kse_power_t kse_power)
+void DimSocket::show_kse_power_info(kse_power_t kse_power)
 {
   printf("  * Version          : %X.%02X.%02X\r\n", kse_power.abVer[0], kse_power.abVer[1], kse_power.abVer[2]);
   printf("  * Serial Number    : %02X%02X%02X%02X%02X%02X%02X%02X\r\n",
@@ -33,13 +19,12 @@ static void show_kse_power_info(kse_power_t kse_power)
 
 
 /**
- * A brief history of JavaDoc-style (C-style) comments.
+ * open socket and connect server or listen client
  *
- * This is the typical JavaDoc-style C-style comment. It starts with two
- * asterisks.
- *
- * @param theory Even if there is only one possible unified theory. it is just a
- *               set of rules and equations.
+ * @param ip IP adress to open
+ * @param port port number to open
+ * @param bind if bind is true, it is server, otherwise client
+ * @return
  */
 void DimSocket::open(const char *ip, unsigned long port, bool bind)
 {
@@ -99,7 +84,11 @@ void DimSocket::open(const char *ip, unsigned long port, bool bind)
   return;
 }
 
-
+/**
+ * open socket and bind ip on server
+ *
+ * @return
+ */
 int DimSocket::bind_()
 {
   int result;
@@ -130,6 +119,11 @@ int DimSocket::bind_()
   return result;
 }
 
+/**
+ * listen client on server
+ *
+ * @return
+ */
 int DimSocket::listen()
 {
   int result;
@@ -143,6 +137,11 @@ int DimSocket::listen()
   return result;
 }
 
+/**
+ * wait client and accept connect client on server
+ *
+ * @return
+ */
 int DimSocket::accept()
 {
   int result;
@@ -192,6 +191,11 @@ int DimSocket::accept()
   return result;
 }
 
+/**
+ * connect server in client
+ *
+ * @return
+ */
 int DimSocket::connect()
 {
   // if (_connection_status == CONNECTED) {
@@ -253,6 +257,11 @@ int DimSocket::connect()
   return result;
 }
 
+/**
+ * TLS handshake with server (client side)
+ *
+ * @return 0 TLS handshake is successful, otherwise -1
+ */
 int DimSocket::handshake()
 {
   int result = _ksetlsTlsClientHandshake(_fd, _handshake_type);
@@ -270,6 +279,11 @@ int DimSocket::handshake()
   return 0;
 }
 
+/**
+ * initializing file descript to use poll()
+ *
+ * @return
+ */
 void DimSocket::init_poll()
 {
   memset(fds, 0, sizeof(fds));
@@ -280,16 +294,33 @@ void DimSocket::init_poll()
   fds[1].fd = _server_fd;
 }
 
+/**
+ * check on writing in DIM hardware
+ *
+ * @return true if on writing, otherwise false
+ */
 bool DimSocket::is_writing()
 {
   return on_write;
 }
 
+/**
+ * check on reading in DIM hardware
+ *
+ * @return true if on reading, otherwise false
+ */
 bool DimSocket::is_reading()
 {
   return on_read;
 }
 
+/**
+ * send data using TLS writing of DIM hardware
+ *
+ * @param size size of data to send
+ * @param data to sent
+ * @return 0 if send data is successful, otherwise -1
+ */
 auto DimSocket::send(uint16_t size, uint8_t *data) -> int
 {
   int result = 0;
@@ -350,6 +381,14 @@ auto DimSocket::send(uint16_t size, uint8_t *data) -> int
   return result;
 }
 
+
+/**
+ * receive data using TLS reading of DIM hardware
+ *
+ * @param size size of received data
+ * @param data received data
+ * @return 0 if receive data is successful, otherwise -1
+ */
 auto DimSocket::recv(int16_t *size, uint8_t *data) -> int
 {
   int result = 0;
@@ -393,6 +432,11 @@ auto DimSocket::recv(int16_t *size, uint8_t *data) -> int
   return result;
 }
 
+/**
+ * TLS write close notify
+ *
+ * @return 0 if close notify is successful, otherwise -1
+ */
 int DimSocket::tls_close_notify()
 {
   int result = 0;
@@ -409,6 +453,11 @@ int DimSocket::tls_close_notify()
   return result;
 }
 
+/**
+ * TLS close
+ *
+ * @return 0 if tls close is successful, otherwise -1
+ */
 int DimSocket::tls_close()
 {
 
@@ -425,21 +474,31 @@ int DimSocket::tls_close()
   return result;
 }
 
+/**
+ * close socket and disconnect client or server
+ *
+ * @return 0 if close socket is successful, otherwise -1
+ */
 int DimSocket::close()
 {
   int result = 0;
   _connection_status = DISCONNECTED;
 
-  // result = tls_close_notify(); //TODO
+  // result = tls_close_notify();
 
-  ::close(_fd);
+  result = ::close(_fd);
   printf("Client disconnected.\r\n");
 
   result = tls_close();
   return result;
 }
 
-void DimSocket::power_off()
+/**
+ * power off DIM hardware
+ *
+ * @return 0 if DIM hardware is successful power off, otherwise -1
+ */
+int DimSocket::power_off()
 {
   int result = 0;
 
@@ -451,4 +510,6 @@ void DimSocket::power_off()
   } else {
     std::cout << "_ksePowerOff() : Success " << result << std::endl;
   }
+
+  return result;
 }
