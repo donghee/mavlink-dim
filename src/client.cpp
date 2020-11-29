@@ -5,8 +5,6 @@
 
 #include "client.h"
 
-using namespace dronemap;
-
 moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_gcs;
 moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
 

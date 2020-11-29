@@ -28,15 +28,13 @@
 
 #include "readerwriterqueue.h"
 
-using namespace dronemap;
-
 void exit_app(int signum);
 
 uint64_t microsSinceEpoch();
 
 /* print mavlink bytes for debugging
  * @param buffer bytes to print
- * @param size of bytes to print
+ * @param buffer_size size of bytes to print
  * @return
  */
 void debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size);
