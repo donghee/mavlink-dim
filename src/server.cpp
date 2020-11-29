@@ -1,27 +1,26 @@
 #include "server.h"
 
-moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_gcs;
-moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
+MAVLinkTlsServer *g_server;
 
-static volatile sig_atomic_t run = 1;
-static Serial_Port *port;
-static DimSocket *dim;
+static void signal_exit(int signum)
+{
+  std::cout << "Caught signal " << signum << std::endl;
+  g_server->exit(signum);
+}
 
-static volatile int autopilot_writing_status = 0;
-
-static volatile int dim_writing_status = 0;
-
-void exit_app(int signum)
+void
+MAVLinkTlsServer::exit(int signum)
 {
   run = 0;
-  std::cout << "Caught signal " << signum << std::endl;
+
   port->stop();
   dim->close();
   dim->power_off();
-  exit(1);
+  ::exit(1);
 }
 
-void debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size)
+void
+MAVLinkTlsServer::debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size)
 {
   printf("MAVLink Buffer: 0x");
 
@@ -35,7 +34,8 @@ void debug_mavlink_msg_buffer(uint8_t *buffer, int buffer_size)
 }
 
 // autopilot -> gcs
-void autopilot_read_message()
+void
+MAVLinkTlsServer::autopilot_read_message()
 {
   int result;
   bool received = false;
@@ -86,7 +86,8 @@ void autopilot_read_message()
   }
 }
 
-int gcs_write_message()
+int
+MAVLinkTlsServer::gcs_write_message()
 {
   int result = 0;
   uint8_t send_buffer[BUFFER_LENGTH];
@@ -134,7 +135,8 @@ int gcs_write_message()
 }
 
 // gcs -> autopilot
-int gcs_read_message()
+int
+MAVLinkTlsServer::gcs_read_message()
 {
   int result = 0;
   bool received = false;
@@ -176,7 +178,8 @@ int gcs_read_message()
   return 1;
 }
 
-void autopilot_write_message()
+void
+MAVLinkTlsServer::autopilot_write_message()
 {
   uint8_t recv_buffer[BUFFER_LENGTH];
   int16_t recv_size;
@@ -203,7 +206,8 @@ void autopilot_write_message()
   }
 }
 
-void *start_autopilot_read_thread(void *args)
+void *
+MAVLinkTlsServer::start_autopilot_read_thread(void *args)
 {
   while (run) {
     autopilot_read_message();
@@ -214,7 +218,8 @@ void *start_autopilot_read_thread(void *args)
   return NULL;
 }
 
-void *start_gcs_write_thread(void *args)
+void *
+MAVLinkTlsServer::start_gcs_write_thread(void *args)
 {
   int result;
 
@@ -232,7 +237,8 @@ void *start_gcs_write_thread(void *args)
   return NULL;
 }
 
-void *start_gcs_read_thread(void *args)
+void *
+MAVLinkTlsServer::start_gcs_read_thread(void *args)
 {
   int result;
   int no_data_count = 0; // no data counts
@@ -257,9 +263,9 @@ void *start_gcs_read_thread(void *args)
 
         } else if (result == -0x7780) {
           printf("\r\nGot KSETLS_ERROR_TLS_FATAL_ALERT_MESSAGE\r\n");
-          //sleep(1);
           usleep(100000); // 0.1s
           result = dim->tls_close_notify();
+          usleep(500000); // 0.5s
           dim->close();
           break;
 
@@ -298,7 +304,8 @@ void *start_gcs_read_thread(void *args)
   return NULL;
 }
 
-void *start_autopilot_write_thread(void *args)
+void *
+MAVLinkTlsServer::start_autopilot_write_thread(void *args)
 {
   while (run) {
     autopilot_write_message();
@@ -310,52 +317,57 @@ void *start_autopilot_write_thread(void *args)
   return NULL;
 }
 
-int main(int argc, const char *argv[])
+typedef void * (*THREADFUNCPTR)(void *);
+
+int
+start_server_threads(Serial_Port *port, DimSocket *dim)
 {
   int result;
   pthread_t autopilot_read_tid, gcs_read_tid, gcs_write_tid, autopilot_write_tid;
 
-  signal(SIGINT, exit_app);
+  MAVLinkTlsServer *server;
+  server = new MAVLinkTlsServer(port, dim);
+  g_server = server;
+
+  signal(SIGINT, signal_exit);
+
+  //result = pthread_create(&autopilot_read_tid, NULL, &start_autopilot_read_thread, (char *)"Autopilot Reading");
+  result = pthread_create(&autopilot_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_read_thread, server);
+
+  if (result) { throw result; }
+
+  result = pthread_create(&gcs_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_gcs_write_thread, server);
+
+  if (result) { throw result; }
+
+  result = pthread_create(&gcs_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_gcs_read_thread, server);
+
+  if (result) { throw result; }
+
+  result = pthread_create(&autopilot_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_write_thread, server);
+
+  if (result) { throw result; }
+
+  pthread_join(gcs_write_tid, NULL);
+  pthread_join(gcs_read_tid, NULL);
+  pthread_join(autopilot_write_tid, NULL);
+  pthread_join(autopilot_read_tid, NULL);
+
+  return NULL;
+}
+
+int main(int argc, const char *argv[])
+{
+  Serial_Port *port;
+  DimSocket *dim;
 
   //port = new Serial_Port("/dev/ttyACM0", 57600);
   port = new Serial_Port("/dev/ttyS0", 921600);
   port->start();
 
-  try {
-    dim = new DimSocket(4433, true);
+  dim = new DimSocket(4433, true);
 
-  } catch (...) {
-    std::cout << " catch runtime error (dim init)" << std::endl;
-    return -1;
-  }
-
-  result = pthread_create(&autopilot_read_tid, NULL, &start_autopilot_read_thread, (char *)"Autopilot Reading");
-
-  if (result) { throw result; }
-
-  result = pthread_create(&gcs_write_tid, NULL, &start_gcs_write_thread, (char *)"GCS Writing");
-
-  if (result) { throw result; }
-
-  result = pthread_create(&gcs_read_tid, NULL, &start_gcs_read_thread, (char *)"GCS Reading");
-
-  if (result) { throw result; }
-
-  result = pthread_create(&autopilot_write_tid, NULL, &start_autopilot_write_thread, (char *)"Autopilot Writing");
-
-  if (result) { throw result; }
-
-  // wait for exit
-  pthread_join(gcs_write_tid, NULL);
-
-  // wait for exit
-  pthread_join(gcs_read_tid, NULL);
-
-  // wait for exit
-  pthread_join(autopilot_write_tid, NULL);
-
-  // wait for exit
-  pthread_join(autopilot_read_tid, NULL);
+  start_server_threads(port, dim);
 
   dim->close();
   port->stop();
