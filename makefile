@@ -38,7 +38,11 @@ format:
 
 doxygen:
 	doxygen Doxyfile
-	./node_modules/.bin/moxygen --output api.md doc/xml/
+	#./node_modules/.bin/moxygen --anchors --output doc/api.md doc/xml/
+	./node_modules/.bin/moxygen -h -t doc/templates/cpp --output doc/api.md doc/xml/
 	# pandoc -f markdown -t org -o api.org api.md
+
+watch_doxygen:
+	watch_ian src/* - 'make doxygen && scp doc/api.md donghee@192.168.88.25:~/Dropbox/docs/log/dim-uav-gcs_code.md'
 
 # https://stackoverflow.com/questions/26578200/is-there-a-way-to-further-shorten-and-generalize-this-makefile/26579143#26579143
