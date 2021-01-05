@@ -361,16 +361,22 @@ int main(int argc, const char *argv[])
   Serial_Port *port;
   DimSocket *dim;
 
+  if (argc !=2) {
+    fprintf(stderr, "Usage: %s /dev/ttyTHS1 \n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+
   //port = new Serial_Port("/dev/ttyACM0", 57600);
-  port = new Serial_Port("/dev/ttyS0", 921600);
+  //port = new Serial_Port("/dev/ttyS0", 921600);
+  port = new Serial_Port(argv[1], 921600);
   port->start();
 
-  dim = new DimSocket(4433, true);
+  dim = new DimSocket("0.0.0.0", 4433, true);
 
   start_server_threads(port, dim);
 
   dim->close();
   port->stop();
 
-  return 0;
+  return EXIT_SUCCESS;
 }

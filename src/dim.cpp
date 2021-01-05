@@ -26,7 +26,7 @@ void DimSocket::show_kse_power_info(kse_power_t kse_power)
  * @param bind if bind is true, it is server, otherwise client
  * @return
  */
-void DimSocket::open(const char *ip, unsigned long port, bool bind)
+void DimSocket::open(const char *ip, uint16_t port, bool bind)
 {
 
   // KSE POWER ON
@@ -100,7 +100,7 @@ int DimSocket::bind_()
 
   _server_addr.sin_family = AF_INET;
   _server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  _server_addr.sin_port = htons(4433);
+  _server_addr.sin_port = htons(_server_port);
 
   // BIND
   result = ::bind(_server_fd,
@@ -209,8 +209,8 @@ int DimSocket::connect()
   }
 
   _addr.sin_family = AF_INET;
-  _addr.sin_addr.s_addr = inet_addr(SERVER_IP);
-  _addr.sin_port = htons(4433);
+  _addr.sin_addr.s_addr = inet_addr(_server_ip);
+  _addr.sin_port = htons(_server_port);
 
   int result;
   // SOCKET CONNECT

@@ -380,11 +380,16 @@ int main(int argc, const char *argv[])
 
   sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-  dim = new DimSocket(4433);
+  if (argc !=2) {
+    fprintf(stderr, "Usage: %s 10.243.45.201 \n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+
+  dim = new DimSocket(argv[1], 4433);
 
   start_client_threads(sock, dim);
 
   dim->close();
 
-  return 0;
+  return EXIT_SUCCESS;
 }

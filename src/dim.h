@@ -18,9 +18,6 @@
 
 #include <poll.h>
 
-//#define SERVER_IP "192.168.88.26"
-#define SERVER_IP "10.243.61.157"
-
 #define DIM_TIMEOUT 10
 
 /**
@@ -61,7 +58,9 @@ class DimSocket
   volatile bool on_read{false};
   volatile bool on_write{false};
 
-  bool _bind = false;
+  const char* _server_ip;
+  uint16_t _server_port;
+  bool _bind;
 
   int _tls_read_error = false;
   int _tls_write_error = false;
@@ -80,17 +79,19 @@ class DimSocket
    *
    * @return
    */
-  explicit DimSocket(uint16_t port, bool bind = false) {
+  explicit DimSocket(const char* server_ip, uint16_t port, bool bind = false) {
     // init pthread mutex, cond
     if (pthread_mutex_init(&lock, NULL)) {
       printf("\n mutex init failed\n");
       throw 1;
     }
 
+    _server_ip = server_ip;
+    _server_port = port;
     _bind = bind;
 
     try {
-      open(SERVER_IP, port, bind);
+      open(_server_ip, port, bind);
     } catch (...) {
       std::cout << " catch runtime error (dim open) " << std::endl;
       close();
@@ -109,7 +110,7 @@ class DimSocket
     close();
   };
 
-  void open(const char *ip, unsigned long port, bool bind = false);
+  void open(const char *ip, uint16_t port, bool bind = false);
   int bind_();
   int listen();
   int accept();
