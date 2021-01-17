@@ -28,6 +28,10 @@
 
 #include "readerwriterqueue.h"
 
+extern "C" {
+#include "kse_ubuntu.h"
+}
+
 void exit_app(int signum);
 
 /**

@@ -43,13 +43,15 @@ MAVLinkTlsServer::autopilot_read_message()
   bool received_sys_status = false;
   bool received_attitude = false;
   mavlink_message_t message;
+  uint8_t encrypted_text[256];
 
   while (!received) {
     result = port->read_message(message);
 
     if (result > 0) {
       if (
-              message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
+              //message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
+              //message.msgid == MAVLINK_MSG_ID_ALTITUDE ||
               message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
               message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
               message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
@@ -64,8 +66,121 @@ MAVLinkTlsServer::autopilot_read_message()
               message.msgid == MAVLINK_MSG_ID_ACTUATOR_CONTROL_TARGET ||
               message.msgid == MAVLINK_MSG_ID_ODOMETRY ||
               message.msgid == MAVLINK_MSG_ID_EXTENDED_SYS_STATE ||
-              message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS ||
-              message.msgid == MAVLINK_MSG_ID_ALTITUDE)  {
+              message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS
+          ) {
+        continue;
+      }
+
+      if (message.msgid == MAVLINK_MSG_ID_ENCAPSULATED_DATA) {
+        mavlink_encapsulated_data_t encapsulated_data;
+        mavlink_msg_encapsulated_data_decode(&message, &encapsulated_data);
+
+        // printf("encapsulated_data %d\n", encapsulated_data.seqnr);
+        if (encapsulated_data.seqnr < 2) { // 0,1
+          for(int i = 0 ; i < 128; i++) {
+            // printf("%02X", encapsulated_data.data[i]);
+            encrypted_text[i+(128*encapsulated_data.seqnr)] = encapsulated_data.data[i];
+          }
+        } else { // 2
+          uint8_t plain_text[256], abIv[16], abAuth[128], abTag[16];
+
+          for(int i = 0 ; i < 16; i++) {
+            // printf("%02X", encapsulated_data.data[i]);
+            abIv[i] = encapsulated_data.data[i];
+            // printf("%02X", abIv[i]);
+          }
+          // printf("\n");
+
+          for(int i = 0 ; i < 128; i++) {
+            // printf("%02X", encapsulated_data.data[i]);
+            abAuth[i] = encapsulated_data.data[16+i];
+            // printf("%02X", abAuth[i]);
+          }
+          // printf("\n");
+
+          for(int i = 0 ; i < 16; i++) {
+            // printf("%02X", encapsulated_data.data[i]);
+            abTag[i] = encapsulated_data.data[16+128+i];
+            // printf("%02X", abTag[i]);
+          }
+          printf("\n");
+          printf("  * Received Encrypted Data using MAVLink from FC \r\n    ");
+
+          for (int i = 0; i < 256; i++) {
+            printf("%02X", encrypted_text[i]);
+
+            if ((i < 255) && ((i + 1) % 32 == 0)) {
+              printf("\r\n    ");
+            }
+          }
+          printf("\r\n");
+          printf("  * Decrypted Plain: MAVLink #33 message from FC \r\n    ");
+          // ARIA (0x50) Decrypt
+          memset(&plain_text, 0, sizeof(plain_text));
+          int ret;
+          ret = _kcmvpAriaGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,abAuth, 128, abTag, 16, DECRYPT);
+          // printf("kcmvpAriaGcm: %d    \n", ret);
+          // printf("    ");
+          for (int i = 0; i < 256; i++) {
+            printf("%02X", plain_text[i]);
+
+            if ((i < 255) && ((i + 1) % 32 == 0)) {
+              printf("\r\n    ");
+            }
+          }
+          printf("\n");
+            // get key 0
+            // uint8_t abPubKey0[64];
+            // uint16_t usSize0 = 0;
+            // memset(&abPubKey0, 0, sizeof(abPubKey0));
+            // ret = _kcmvpGetKey(abPubKey0, &usSize0, KCMVP_ARIA128_KEY, 0);
+            // if (ret < 0 ) {
+            //   printf("Error kcmvpGetKey: %d\n", ret);
+            // }
+            // printf("kcmvpGetKey Size: %d\n", usSize0);
+            // printf("kcmvpGetKey: \n");
+            // for (int i = 0; i < usSize0; i++) {
+            //   printf("%02X", abPubKey0[i]);
+            // }
+
+            // printf("\r\n");
+
+            // set key 0
+            // abPubKey0[0] = 0x03;
+            // abPubKey0[1] = 0x10;
+            // abPubKey0[2] = 0x81;
+            // abPubKey0[3] = 0x8A;
+            // abPubKey0[4] = 0x36;
+            // abPubKey0[5] = 0xE2;
+            // abPubKey0[6] = 0xCB;
+            // abPubKey0[7] = 0x32;
+            // abPubKey0[8] = 0x0A;
+            // abPubKey0[9] = 0xFD;
+            // abPubKey0[10] = 0x92;
+            // abPubKey0[11] = 0xEC;
+            // abPubKey0[12] = 0xE3;
+            // abPubKey0[13] = 0x52;
+            // abPubKey0[14] = 0x3D;
+            // abPubKey0[15] = 0x1A;
+
+            // ret = _kcmvpEraseKey(KCMVP_ARIA128_KEY, 0);
+            // if (ret < 0 ) {
+            //   printf("Error kcmvpEraseKey: %d\n", ret);
+            // }
+
+            // ret = _kcmvpPutKey(KCMVP_ARIA128_KEY, 0, abPubKey0, 16);
+            // if (ret < 0 ) {
+            //   // printf("Error kcmvpPutKey: %d\n", ret);
+            //   printf("Error kcmvpGenerateKey: %d\n", ret);
+            // }
+
+            // ret = _kcmvpGenerateKey(KCMVP_ARIA128_KEY, 0, 0);
+            // if (ret < 0 ) {
+            //   // printf("Error kcmvpPutKey: %d\n", ret);
+            //   printf("Error kcmvpGenerateKey: %d\n", ret);
+            // }
+        }
+
         continue;
       }
 
@@ -209,7 +324,8 @@ MAVLinkTlsServer::autopilot_write_message()
 void *
 MAVLinkTlsServer::start_autopilot_read_thread(void *args)
 {
-  while (run) {
+  //while (run) {
+  while (1) {
     autopilot_read_message();
     usleep(10); // 10khz
   }
@@ -330,6 +446,7 @@ start_server_threads(Serial_Port *port, DimSocket *dim)
   g_server = server;
 
   signal(SIGINT, signal_exit);
+
 
   //result = pthread_create(&autopilot_read_tid, NULL, &start_autopilot_read_thread, (char *)"Autopilot Reading");
   result = pthread_create(&autopilot_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_read_thread, server);
