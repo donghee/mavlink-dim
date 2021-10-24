@@ -478,14 +478,14 @@ int main(int argc, const char *argv[])
   Serial_Port *port;
   DimSocket *dim;
 
-  if (argc !=2) {
-    fprintf(stderr, "Usage: %s /dev/ttyTHS1 \n", argv[0]);
+  if (argc !=3) {
+    fprintf(stderr, "Usage: %s /dev/ttyTHS1 921600\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
   //port = new Serial_Port("/dev/ttyACM0", 57600);
   //port = new Serial_Port("/dev/ttyS0", 921600);
-  port = new Serial_Port(argv[1], 921600);
+  port = new Serial_Port(argv[1], atoi(argv[2]));
   port->start();
 
   dim = new DimSocket("0.0.0.0", 4433, true);
