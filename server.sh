@@ -7,7 +7,6 @@ sleep 2
 sudo tools/uhubctl/uhubctl -l 1-1 -p 1-4 -a on
 sleep 2
 make
-#sudo ./mavlink_dim_server  /dev/ttyTHS1
-sudo ./mavlink_dim_server  /dev/ttyS0 921600
+./mavlink_dim_server  /dev/ttyS0 921600
 
 #reset

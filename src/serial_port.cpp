@@ -129,9 +129,17 @@ read_message(mavlink_message_t &message)
   //   READ FROM PORT
   // --------------------------------------------------------------------------
 
+  fds.revents = 0;
+  fcntl(fd, F_SETFL, flags|O_NONBLOCK);
+  if (poll(&fds, 1, 100) == 0) {
+	  return false;
+  }
+  fcntl(fd, F_SETFL, flags);
+
+  if (fds.revents & POLLIN) {
+
   // this function locks the port during read
   int result = _read_port(cp);
-
 
   // --------------------------------------------------------------------------
   //   PARSE MESSAGE
@@ -183,6 +191,8 @@ read_message(mavlink_message_t &message)
 
       fprintf(stderr, "\n");
     }
+  }
+
   }
 
   // Done!
@@ -242,6 +252,11 @@ start()
   //   SETUP PORT
   // --------------------------------------------------------------------------
   bool success = _setup_port(baudrate, 8, 1, false, false);
+
+  // poll setup
+  fds.fd = fd;
+  fds.events = POLLIN;
+  flags = fcntl(fd, F_GETFL, 0);
 
   // --------------------------------------------------------------------------
   //   CHECK STATUS
@@ -484,12 +499,12 @@ _read_port(uint8_t &cp)
 {
 
   // Lock
-  pthread_mutex_lock(&lock);
+  //pthread_mutex_lock(&lock);
 
   int result = read(fd, &cp, 1);
 
   // Unlock
-  pthread_mutex_unlock(&lock);
+  //pthread_mutex_unlock(&lock);
 
   return result;
 }
@@ -504,16 +519,16 @@ _write_port(char *buf, unsigned len)
 {
 
   // Lock
-  pthread_mutex_lock(&lock);
+  //pthread_mutex_lock(&lock);
 
   // Write packet via serial link
   const int bytesWritten = static_cast<int>(write(fd, buf, len));
 
   // Wait until all data has been written
-  tcdrain(fd);
+  //tcdrain(fd);
 
   // Unlock
-  pthread_mutex_unlock(&lock);
+  //pthread_mutex_unlock(&lock);
 
 
   return bytesWritten;

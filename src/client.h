@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <dim.h>
+#include <dim_client.h>
 #include <signal.h>
 
 #include <mavlink.h>
@@ -41,7 +41,7 @@ class MAVLinkTlsClient
    *
    * @return
    */
-  explicit MAVLinkTlsClient(int _sock, DimSocket *_dim) {
+  explicit MAVLinkTlsClient(int _sock, DimClient *_dim) {
     sock = _sock;
     dim = _dim;
 
@@ -170,7 +170,7 @@ class MAVLinkTlsClient
   moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_gcs;
   moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
 
-  DimSocket *dim;
+  DimClient *dim;
 
   volatile int dim_writing_status = 0;
 

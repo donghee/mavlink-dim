@@ -1,3 +1,5 @@
+#ifndef SERVER_H
+#define SERVER_H
 
 /**
  * @file server.h
@@ -19,7 +21,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <dim.h>
+#include <dim_server.h>
 #include <signal.h>
 #include <serial_port.h>
 
@@ -47,7 +49,7 @@ class MAVLinkTlsServer
    *
    * @return
    */
-  explicit MAVLinkTlsServer(Serial_Port * _port, DimSocket * _dim) {
+  explicit MAVLinkTlsServer(Serial_Port * _port, DimServer * _dim) {
       port = _port;
       dim = _dim;
 
@@ -144,8 +146,10 @@ class MAVLinkTlsServer
   moodycamel::BlockingReaderWriterQueue<mavlink_message_t> q_to_autopilot;
 
   Serial_Port *port;
-  DimSocket *dim;
+  DimServer *dim;
 
   volatile int autopilot_writing_status = 0;
   volatile int dim_writing_status = 0;
 };
+
+#endif

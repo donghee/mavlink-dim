@@ -16,6 +16,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include <fcntl.h>
+
 #include <poll.h>
 
 #define DIM_TIMEOUT 10
@@ -26,7 +28,7 @@
  */
 class DimSocket
 {
- private:
+ protected:
   /** data struct for DIM Hardware status. */
   struct kse_power_t {
     uint8_t abVer[3];
@@ -79,12 +81,13 @@ class DimSocket
    *
    * @return
    */
-  explicit DimSocket(const char* server_ip, uint16_t port, bool bind = false) {
+  DimSocket(const char* server_ip, uint16_t port, bool bind = false) {
     // init pthread mutex, cond
     if (pthread_mutex_init(&lock, NULL)) {
       printf("\n mutex init failed\n");
       throw 1;
     }
+    printf("\n dim socket constructor\n");
 
     _server_ip = server_ip;
     _server_port = port;
@@ -95,7 +98,7 @@ class DimSocket
     } catch (...) {
       std::cout << " catch runtime error (dim open) " << std::endl;
       close();
-      throw std::runtime_error(strerror(errno));
+//      throw std::runtime_error(strerror(errno));
     }
   };
 
@@ -109,12 +112,9 @@ class DimSocket
     pthread_mutex_destroy(&lock);
     close();
   };
-
+/*
   void open(const char *ip, uint16_t port, bool bind = false);
-  int bind_();
-  int listen();
-  int accept();
-  int connect();
+  */
 
   /**
    * check client is connected
@@ -124,7 +124,10 @@ class DimSocket
   bool is_connected() const { return _connection_status == CONNECTED; };
   bool is_writing();
   bool is_reading();
+
+/*
   int handshake();
+  */
   int send(uint16_t size, uint8_t* data);
   int recv(int16_t* size, uint8_t* data);
   int tls_close_notify();

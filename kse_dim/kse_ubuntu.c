@@ -481,6 +481,16 @@ int16_t _tlsRecv(uint8_t *pbData, int16_t sDataBufferLen, SOCKET socketDesc)
 // User Code Begin -------------------------------------------------------------
     int16_t sInLen;
 
+    int error = 0;
+    socklen_t error_len = sizeof (error);
+    if(getsockopt(socketDesc, SOL_SOCKET, SO_ERROR, &error, &error_len) == -1) { 
+      printf("tlsRecv(): result -1, fd error %d\n", error);
+      return -1;
+    } 
+    if (error != 0) {
+      printf("tlsRecv(): result != -1, fd error %d\n", error);
+      return -1;
+    }
     sInLen = (int16_t)read(socketDesc, pbData, sDataBufferLen);
 #ifdef ENABLE_DEBUG_PRINT
     if (sInLen >= 0)
@@ -503,6 +513,17 @@ int16_t _tlsSend(SOCKET socketDesc, uint8_t *pbData, int16_t sDataBufferLen)
 // User Code Begin -------------------------------------------------------------
     int16_t sInLen;
 
+    int error = 0;
+    socklen_t error_len = sizeof (error);
+    if(getsockopt(socketDesc, SOL_SOCKET, SO_ERROR, &error, &error_len) == -1) { 
+      printf("tlsSend(): result -1, fd error %d\n", error);
+      return -1;
+    } 
+    if (error != 0) {
+      printf("tlsSend(): result != -1, fd error %d\n", error);
+      return -1;
+    }
+    
     sInLen = (int16_t)write(socketDesc, pbData, sDataBufferLen);
 #ifdef ENABLE_DEBUG_PRINT
     if (sInLen >= 0)

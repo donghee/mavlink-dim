@@ -360,7 +360,7 @@ MAVLinkTlsServer::start_gcs_read_thread(void *args)
   int no_data_count = 0; // no data counts
 
   while (run) {
-    if (dim->accept() == -1) {
+    if (dim->accept() < 0) {
       // dim->close();
       printf("\r\nACCEPT failed\r\n");
       continue;
@@ -381,7 +381,10 @@ MAVLinkTlsServer::start_gcs_read_thread(void *args)
           printf("\r\nGot KSETLS_ERROR_TLS_FATAL_ALERT_MESSAGE\r\n");
           usleep(100000); // 0.1s
           result = dim->tls_close_notify();
-          usleep(500000); // 0.5s
+          //printf("\r\nresult: %d\r\n", result);
+	  //if (result == 0)
+		  //dim->tls_close();
+          //usleep(500000); // 0.5s
           dim->close();
           break;
 
@@ -408,7 +411,7 @@ MAVLinkTlsServer::start_gcs_read_thread(void *args)
         }
 
       } else { // ON DATA
-        printf("Timeout: %d\r\n", no_data_count);
+        //printf("Timeout: %d\r\n", no_data_count);
         no_data_count = 0;
       }
 
@@ -436,7 +439,7 @@ MAVLinkTlsServer::start_autopilot_write_thread(void *args)
 typedef void * (*THREADFUNCPTR)(void *);
 
 int
-start_server_threads(Serial_Port *port, DimSocket *dim)
+start_server_threads(Serial_Port *port, DimServer *dim)
 {
   int result;
   pthread_t autopilot_read_tid, gcs_read_tid, gcs_write_tid, autopilot_write_tid;
@@ -475,20 +478,16 @@ start_server_threads(Serial_Port *port, DimSocket *dim)
 
 int main(int argc, const char *argv[])
 {
-  Serial_Port *port;
-  DimSocket *dim;
-
+  DimServer * dim;
   if (argc !=3) {
     fprintf(stderr, "Usage: %s /dev/ttyTHS1 921600\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  //port = new Serial_Port("/dev/ttyACM0", 57600);
-  //port = new Serial_Port("/dev/ttyS0", 921600);
-  port = new Serial_Port(argv[1], atoi(argv[2]));
+  Serial_Port *port = new Serial_Port(argv[1], atoi(argv[2]));
   port->start();
 
-  dim = new DimSocket("0.0.0.0", 4433, true);
+  dim = new DimServer("0.0.0.0", 4433);
 
   start_server_threads(port, dim);
 

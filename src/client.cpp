@@ -86,7 +86,7 @@ MAVLinkTlsClient::autopilot_write_message()
       result = dim->send(send_size, send_buffer);
       dim_writing_status = false;
 
-      if (result == -1) {
+      if (result < 0) {
         return result;
       }
     }
@@ -318,6 +318,7 @@ MAVLinkTlsClient::start_autopilot_read_write_thread(void *args)
         if (result < 0) {
           printf("\r\nSEND ERROR: %X\r\n", result);
           result = dim->close();
+          dim->connect();
           break;
         }
 
@@ -333,7 +334,7 @@ MAVLinkTlsClient::start_autopilot_read_write_thread(void *args)
 typedef void * (*THREADFUNCPTR)(void *);
 
 int
-start_client_threads(int _sock, DimSocket *dim) {
+start_client_threads(int _sock, DimClient *dim) {
   // pthread
   int result;
   pthread_t autopilot_read_tid, gcs_write_tid, gcs_read_tid, autopilot_write_tid;
@@ -376,7 +377,7 @@ start_client_threads(int _sock, DimSocket *dim) {
 int main(int argc, const char *argv[])
 {
   int sock;
-  DimSocket *dim;
+  DimClient *dim;
 
   sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -385,7 +386,7 @@ int main(int argc, const char *argv[])
     exit(EXIT_FAILURE);
   }
 
-  dim = new DimSocket(argv[1], 4433);
+  dim = new DimClient(argv[1], 4433);
 
   start_client_threads(sock, dim);
 

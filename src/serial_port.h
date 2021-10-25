@@ -61,6 +61,7 @@
 #include <termios.h> // POSIX terminal control definitions
 #include <pthread.h> // This uses POSIX Threads
 #include <signal.h>
+#include <poll.h>
 
 //#include <common/mavlink.h>
 #include <mavlink.h>
@@ -147,6 +148,9 @@ private:
 	int  fd;
 	mavlink_status_t lastStatus;
 	pthread_mutex_t  lock;
+
+  	struct pollfd fds;
+	int flags;
 
 	void initialize_defaults();
 
