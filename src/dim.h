@@ -87,7 +87,6 @@ class DimSocket
       printf("\n mutex init failed\n");
       throw 1;
     }
-    printf("\n dim socket constructor\n");
 
     _server_ip = server_ip;
     _server_port = port;

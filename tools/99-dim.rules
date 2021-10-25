@@ -1,0 +1,2 @@
+# KSE DIM
+SUBSYSTEM=="usb", ATTR{idVendor}=="25f8", MODE="0666"

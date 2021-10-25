@@ -1,3 +1,6 @@
 [submodule "c_library_v2"]
 	path = c_library_v2
 	url = https://github.com/mavlink/c_library_v2
+[submodule "tools/uhubctl"]
+	path = tools/uhubctl
+	url = https://github.com/mvp/uhubctl

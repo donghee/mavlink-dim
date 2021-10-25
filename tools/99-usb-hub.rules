@@ -1,0 +1,2 @@
+# Amazon basic USB3 HUB
+SUBSYSTEM=="usb", ATTR{idVendor}=="2109", MODE="0666"
