@@ -126,20 +126,6 @@ class MAVLinkTlsClient
   void *start_gcs_read_thread(void *args);
 
   /**
-   * main loop for writing mavlink message to autopilot.
-   *
-   * @return
-   */
-  void *start_autopilot_write_thread(void *args);
-
-  /**
-   * main loop for reading mavlink message from autopilot.
-   *
-   * @return
-   */
-  void *start_autopilot_read_thread(void *args);
-
-  /**
    * main loop for writing mavlink message to GCS.
    *
    * @return
