@@ -143,8 +143,8 @@ MAVLinkTlsClient::gcs_write_message()
   mavlink_message_t message;
 
   // Fully-blocking
-  q_to_gcs.wait_dequeue(message);
-  // if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
+  // q_to_gcs.wait_dequeue(message);
+  if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
   {
     printf("Received message from fc with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
     send_size = mavlink_msg_to_send_buffer((uint8_t *)send_buffer, &message);
@@ -185,10 +185,12 @@ MAVLinkTlsClient::start_autopilot_read_write_thread(void *args)
   struct pollfd *fds;
   int result = 0;
 
+  // dim->init_poll();
+
   while (run) {
     dim->init_poll();
 
-    while (1) {
+    while (1 && run) {
       fds = dim->poll_descriptor();
 
       if (poll(fds, 1, DIM_TIMEOUT) > 0) {
@@ -247,36 +249,41 @@ MAVLinkTlsClient::start_autopilot_read_write_thread(void *args)
     }
   }
 
+  printf("\r\nExit autopilot read write thread\r\n");
+
   return NULL;
 }
 
 typedef void * (*THREADFUNCPTR)(void *);
 
+pthread_t autopilot_read_write_tid, gcs_write_tid, gcs_read_tid;
+
 int
-start_client_threads(int _sock, DimClient *dim) {
-  // pthread
+start_client_threads(MAVLinkTlsClient *client, DimClient *dim) {
   int result;
-  pthread_t autopilot_read_write_tid, gcs_write_tid, gcs_read_tid;
-
-  MAVLinkTlsClient *client;
-  client = new MAVLinkTlsClient(_sock, dim);
-  g_client = client;
-
-  signal(SIGINT, signal_exit);
 
   result = pthread_create(&gcs_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_gcs_write_thread, client);
 
-  if (result) { throw result; }
+  if (result) { return result; }
 
   result = pthread_create(&gcs_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_gcs_read_thread, client);
 
-  if (result) { throw result; }
+  if (result) { return result; }
 
   result = pthread_create(&autopilot_read_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_autopilot_read_write_thread, client);
 
-  if (result) { throw result; }
+  if (result) { return result; }
 
   // wait for exit
+  // pthread_join(gcs_write_tid, NULL);
+  // pthread_join(gcs_read_tid, NULL);
+  // pthread_join(autopilot_read_write_tid, NULL);
+
+  return NULL;
+}
+
+int
+wait_client_threads() {
   pthread_join(gcs_write_tid, NULL);
   pthread_join(gcs_read_tid, NULL);
   pthread_join(autopilot_read_write_tid, NULL);
@@ -284,21 +291,103 @@ start_client_threads(int _sock, DimClient *dim) {
   return NULL;
 }
 
+
+int init_commander(int& commander_sock) {
+  struct sockaddr_in commanderAddr;
+
+  commander_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+  memset(&commanderAddr, 0, sizeof(commanderAddr));
+  commanderAddr.sin_family = AF_INET;
+  commanderAddr.sin_addr.s_addr = INADDR_ANY;
+  commanderAddr.sin_port = htons(9120);
+
+  if (-1 == bind(commander_sock, (struct sockaddr *)&commanderAddr, sizeof(struct sockaddr))) {
+    std::cout << "bind fail " << std::endl;
+    close(commander_sock);
+    return -1;
+  }
+
+  return 0;
+}
+
 int main(int argc, const char *argv[])
 {
-  int sock;
-  DimClient *dim;
-
-  sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
   if (argc !=2) {
     fprintf(stderr, "Usage: %s 10.243.45.201 \n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  dim = new DimClient(argv[1], 4433);
+  int mavlink_sock, commander_sock;
+  mavlink_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  init_commander(commander_sock);
 
-  start_client_threads(sock, dim);
+  DimClient *dim = new DimClient(argv[1], 4433);
+  MAVLinkTlsClient *client = new MAVLinkTlsClient(mavlink_sock, dim);
+
+  g_client = client;
+  signal(SIGINT, signal_exit);
+
+  // start_client_threads(client, dim);
+  // wait_client_threads();
+
+  // while 1
+  // read command
+  // if connect command: stop thread (run = 0) and start thread (run = 1)
+  // if disconnect command: stop thread (run = 0)
+  // if auth command with id, pass: send server and read key
+  // if encrypt command with plaintext:
+  // if decrypt command with cypertext:
+
+  char commander_buffer[40];
+  int received = 0;
+
+  while (1) {
+    sleep(1);
+    if ((received = recvfrom(commander_sock, commander_buffer, 40, 0, NULL, NULL)) != -1) {
+      if (received > 4) {
+        printf("Received command: %s", commander_buffer);
+        char * command = new char[4]();
+        memcpy(command, &commander_buffer[0], 4);
+
+        if (strncmp(command, "conn", 4) == 0) { // connect
+          client->run = 0;
+          wait_client_threads();
+          client->run = 1;
+
+          start_client_threads(client, dim);
+        }
+        if (strncmp(command, "disc", 4) == 0) { // disconnect
+          client->run = 0;
+          wait_client_threads();
+        }
+        if (strncmp(command, "auth", 4) == 0) { // auth
+          client->run = 0;
+          wait_client_threads();
+
+          char *auth_key = new char[received - 5]();
+          memcpy(auth_key, &commander_buffer[5], received - 5);
+          printf("auth key: %s", auth_key);
+        }
+        if (strncmp(command, "encr", 4) == 0) { // encrypt
+          client->run = 0;
+          wait_client_threads();
+
+          char *plaintext = new char[received - 8]();
+          memcpy(plaintext, &commander_buffer[8], received - 8);
+          printf("plaintext: %s", plaintext);
+        }
+        if (strncmp(command, "decr", 4) == 0) { // decrypt
+          client->run = 0;
+          wait_client_threads();
+
+          char *cypertext = new char[received - 8]();
+          memcpy(cypertext, &commander_buffer[8], received - 8);
+          printf("cypertext: %s", cypertext);
+        }
+      }
+    }
+  }
 
   dim->close();
 
