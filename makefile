@@ -31,7 +31,7 @@ git_submodule:
 	git submodule update --init --recursive
 
 clean:
-	rm -rf *.o *.a mavlink_dim mavlink_dim_server
+	rm -rf *.o *.a mavlink_dim_client mavlink_dim_server
 
 format:
 	astyle --options=./astylerc --preserve-date src/*.cpp
