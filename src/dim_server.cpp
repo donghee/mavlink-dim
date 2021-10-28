@@ -13,35 +13,8 @@ extern "C" {
  */
 void DimServer::open(const char *ip, uint16_t port)
 {
-
-  // KSE POWER ON
-  int16_t result;
-  struct kse_power_t kse_power;
-  result = _ksePowerOn(kse_power.abVer, &kse_power.bLifeCycle, kse_power.abSerialNumber, &kse_power.bPinType,
-                       &kse_power.bMaxPinRetryCount, &kse_power.usMaxKcmvpKeyCount,
-                       &kse_power.usMaxCertKeyCount, &kse_power.usMaxIoDataSize, &kse_power.usInfoFileSize);
-
-  if (result == KSE_SUCCESS) {
-    std::cout << "_ksePowerOn() : Success " << result << std::endl;
-    show_kse_power_info(kse_power);
-
-  } else if (result == KSE_FAIL_ALREADY_POWERED_ON) {
-    std::cout << "_ksePowerOn() : Already power on " << result << std::endl;
-    result = _ksePowerOff();
-
-    if (result < 0) {
-      std::cout << "_ksePowerOff() : Fail " << result << std::endl;
-
-    } else {
-      std::cout << "_ksePowerOff() : Success " << result << std::endl;
-    }
-
-    throw std::runtime_error(strerror(errno));
-
-  } else {
-    std::cout << "_ksePowerOn() : Fail " << result << std::endl;
-    _ksePowerOff();
-    throw std::runtime_error(strerror(errno));
+  if (power_on() == -1) {
+    return;
   }
 
   _handshake_type = KSETLS_FULL_HANDSHAKE;

@@ -132,6 +132,8 @@ class DimSocket
   int tls_close_notify();
   int tls_close();
   int close();
+
+  int power_on();
   int power_off();
 
   void init_poll();
