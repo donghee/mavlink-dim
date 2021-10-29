@@ -14,12 +14,19 @@ class DimClient : public DimSocket
   DimClient(const char* server_ip, uint16_t port)
 	  : DimSocket {server_ip, port, false }
   {
+    if (power_on() == -1) {
+      std::cout << "power_on() error" << std::endl;
+      return;
+    }
+
+    /*
     try {
       open(server_ip, port);
     } catch (...) {
       std::cout << " catch runtime error (dim open) " << std::endl;
       close();
     }
+    */
   }
 
   void open(const char *ip, uint16_t port);

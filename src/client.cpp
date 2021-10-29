@@ -1,5 +1,9 @@
 #include "client.h"
 
+extern "C" {
+#include "kse_ubuntu.h"
+}
+
 MAVLinkTlsClient *g_client;
 
 static void signal_exit(int signum)
@@ -311,6 +315,150 @@ int init_commander(int& commander_sock) {
   return 0;
 }
 
+int dim_encrypt(uint8_t* abData, int abData_i, uint8_t* abIv, int abIv_i, uint8_t* abAuth, int abAuth_i, uint8_t* abData1, int abData1_i, uint8_t* abTag, int abTag_i) {
+    int16_t sRv;
+    int i;
+    uint16_t usSize0, usSize1;
+    //uint8_t abData[256], abData1[256], abData2[256], abIv[16], abAuth[128], abTag[16];
+    //uint8_t abData1[256], abData2[256];
+    //, abTag[16];
+
+   // Encrypt abData to abData1
+    sRv = _kcmvpAriaGcm(abData1, abData, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
+                        abAuth, 128, abTag, 16, ENCRYPT);
+    return sRv;
+}
+
+int dim_decrypt(int name, int key, const char* buffer, uint8_t* plain_text) {
+  //uint8_t plain_text[256];
+  uint8_t abIv[16], abAuth[128], abTag[16], encrypted_text[256];
+
+  for(int i = 0 ; i < 16; i++) {
+    abIv[i] = buffer[i];
+    // printf("%02X", abIv[i]);
+  }
+  // printf("\n");
+
+  for(int i = 0 ; i < 128; i++) {
+    abAuth[i] = buffer[16+i];
+    // printf("%02X", abAuth[i]);
+  }
+  // printf("\n");
+
+  for(int i = 0 ; i < 16; i++) {
+    abTag[i] = buffer[16+128+i];
+    // printf("%02X", abTag[i]);
+  }
+
+  for(int i = 0 ; i < 256; i++) {
+    encrypted_text[i] = buffer[i+16+128+16];
+  }
+
+  printf("\r\n");
+  printf("dim_decrypt()\r\n");
+  printf("  * Decrypted Plaintext \r\n    ");
+
+  int ret;
+
+  ret = _kcmvpAriaGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,abAuth, 128, abTag, 16, DECRYPT);
+  for (int i = 0; i < 256; i++) {
+    printf("%02X", plain_text[i]);
+
+    if ((i < 255) && ((i + 1) % 32 == 0)) {
+      printf("\r\n    ");
+    }
+  }
+  printf("\n");
+}
+
+//int dim_get_key(char *abPubKey0) {
+int dim_get_key() {
+    int ret;
+    // get key 0
+    uint8_t abPubKey0[64];
+    uint16_t usSize0 = 0;
+    memset(&abPubKey0, 0, sizeof(abPubKey0));
+    ret = _kcmvpGetKey(abPubKey0, &usSize0, KCMVP_ARIA128_KEY, 0);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpGetKey: %d\n", ret);
+    else
+      printf("Error kcmvpGetKey: %d\n", ret);
+
+    printf("kcmvpGetKey Size: %d\n", usSize0);
+    printf("kcmvpGetKey: ");
+    for (int i = 0; i < usSize0; i++) {
+      printf("%02X", abPubKey0[i]);
+    }
+
+    printf("\r\n");
+    return 0;
+}
+
+int dim_set_key(uint8_t *abPubKey0) {
+    int ret;
+
+    // set key 0
+    ret = _kcmvpEraseKey(KCMVP_ARIA128_KEY, 0);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpEraseKey: %d\n", ret);
+    else
+      printf("Error kcmvpEraseKey: %d\n", ret);
+
+    ret = _kcmvpPutKey(KCMVP_ARIA128_KEY, 0, abPubKey0, 16);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpPutKey: %d\n", ret);
+    else
+      printf("Error kcmvpPutKey: %d\n", ret);
+
+    return 0;
+}
+
+int dim_generate_key() {
+    int16_t ret;
+
+    ret = _kcmvpEraseKey(KCMVP_ARIA128_KEY, 0);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpEraseKey: %d\n", ret);
+    else
+      printf("Error kcmvpEraseKey: %d\n", ret);
+
+    ret = _kcmvpGenerateKey(KCMVP_ARIA128_KEY, 0, NOT_USED);
+    if (ret == KSE_SUCCESS )
+      printf("Success kcmvpGenerateKey: %d\n", ret);
+    else 
+      printf("Error kcmvpGenerateKey: %d\n", ret);
+
+    return ret;
+}
+
+int dim_generate_random() {
+    int i;
+    int16_t sRv;
+    uint16_t usSize0, usSize1;
+    uint8_t abData[256];
+
+    // DRBG ====================================================================
+    sRv = _kcmvpDrbg(abData, 256);
+    if (sRv == KSE_SUCCESS)
+        printf("Success kcmvpDrbg: %d\n", sRv);
+    else
+    {
+        printf("Error kcmvpDrbg: Fail(-0x%04X)\r\n", -sRv);
+        return -1;
+    }
+    printf("  * Random Number :\r\n    ");
+    for (i = 0; i < 256; i++)
+    {
+        printf("%02X", abData[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+
+    return 0;
+}
+
+
 int main(int argc, const char *argv[])
 {
   if (argc !=2) {
@@ -355,6 +503,7 @@ int main(int argc, const char *argv[])
           wait_client_threads();
           client->run = 1;
 
+          dim->open(argv[1], 4433);
           start_client_threads(client, dim);
         }
         if (strncmp(command, "disc", 4) == 0) { // disconnect
@@ -369,21 +518,131 @@ int main(int argc, const char *argv[])
           memcpy(auth_key, &commander_buffer[5], received - 5);
           printf("auth key: %s", auth_key);
         }
-        if (strncmp(command, "encr", 4) == 0) { // encrypt
+        if (strncmp(command, "decr", 4) == 0) { // decrypt
           client->run = 0;
           wait_client_threads();
 
+	  /*
           char *plaintext = new char[received - 8]();
           memcpy(plaintext, &commander_buffer[8], received - 8);
           printf("plaintext: %s", plaintext);
+	  */
+
+           printf("dim_decrypt() \r\n");
+          //dim_decrypt(1, 1, buffer, plaintext)
+
         }
-        if (strncmp(command, "decr", 4) == 0) { // decrypt
+
+        if (strncmp(command, "rand", 4) == 0) { // random
+          client->run = 0;
+          wait_client_threads();
+    	  dim_generate_random();
+	}
+
+        if (strncmp(command, "encr", 4) == 0) { // encrypt
           client->run = 0;
           wait_client_threads();
 
           char *cypertext = new char[received - 8]();
           memcpy(cypertext, &commander_buffer[8], received - 8);
-          printf("cypertext: %s", cypertext);
+          //printf("cypertext: %s", cypertext);
+
+    uint8_t abPubKey0[64];
+    abPubKey0[0] = 0x03;
+    abPubKey0[1] = 0x10;
+    abPubKey0[2] = 0x81;
+    abPubKey0[3] = 0x8A;
+    abPubKey0[4] = 0x36;
+    abPubKey0[5] = 0xE2;
+    abPubKey0[6] = 0xCB;
+    abPubKey0[7] = 0x32;
+    abPubKey0[8] = 0x0A;
+    abPubKey0[9] = 0xFD;
+    abPubKey0[10] = 0x92;
+    abPubKey0[11] = 0xEC;
+    abPubKey0[12] = 0xE3;
+    abPubKey0[13] = 0x52;
+    abPubKey0[14] = 0x3D;
+    abPubKey0[15] = 0x1A;
+
+    dim_set_key((uint8_t*)abPubKey0);
+    //dim_generate_key();
+    //dim_get_key();
+
+    int i;
+    int16_t sRv;
+    uint8_t abData[256], abTag[16];
+    uint8_t abData1[256], abData2[256];
+    uint8_t abIv[16], abAuth[128];
+
+    // IV
+    sRv = _kcmvpDrbg(abIv, 16);
+    if (sRv != KSE_SUCCESS)
+    {
+        printf("_kcmvpDrbg(IV) : Fail(-0x%04X)\r\n", -sRv);
+    }
+
+    // Auth
+    sRv = _kcmvpDrbg(abAuth, 128);
+    if (sRv != KSE_SUCCESS)
+    {
+        printf("_kcmvpDrbg(Auth) : Fail(-0x%04X)\r\n", -sRv);
+    }
+
+    // Plaintext
+    printf("  * Plain Data :\r\n    ");
+    for (i = 0; i < 256; i++)
+    {
+        abData[i]= 0xaa;
+        printf("%02X", abData[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+
+    printf("\r\ndim_encrypt() \r\n");
+    dim_encrypt(abData, 256, abIv, 16, abAuth, 128, abData1, 256, abTag, 16);
+
+    printf("\r\n");
+
+    uint8_t result [16+128+16+256];
+    memcpy(result, &abIv[0], 16);
+    memcpy(result+16, &abAuth[0], 128);
+    memcpy(result+16+128, &abTag[0], 16);
+    memcpy(result+16+128+16, &abData1[0], 256);
+
+    printf("  * Result Data :\r\n    ");
+    for (i = 0; i < 16+128+16+256; i++)
+    {
+        printf("%02X", result[i]);
+        if ((i < 512) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+    printf("\r\n");
+    printf("TEST");
+    printf("\r\n");
+
+    // TEST
+    // Encrypt
+    printf("  * Encrypted Data :\r\n    ");
+    for (i = 0; i < 256; i++)
+    {
+        printf("%02X", abData1[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+
+    // Tag
+    printf("  * Tag :\r\n    ");
+    for (i = 0; i < 16; i++)
+        printf("%02X", abTag[i]);
+    printf("\r\n");
+
+    // decrypt
+    dim_decrypt(1, 1, (const char*)result, abData2);
+
+
         }
       }
     }

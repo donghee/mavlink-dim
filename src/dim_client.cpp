@@ -13,10 +13,6 @@ extern "C" {
  */
 void DimClient::open(const char *ip, uint16_t port)
 {
-  if (power_on() == -1) {
-    return;
-  }
-
   _handshake_type = KSETLS_FULL_HANDSHAKE;
 
     // Client

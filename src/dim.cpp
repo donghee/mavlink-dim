@@ -35,6 +35,8 @@ int DimSocket::power_on()
     _ksePowerOff();
     throw std::runtime_error(strerror(errno));
   }
+
+
   return result;
 }
 
