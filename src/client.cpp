@@ -45,7 +45,7 @@ MAVLinkTlsClient::gcs_read_message()
 
   bool received = false;
 
-  while (!received) {
+  while (!received && run) {
     recv_size = recvfrom(sock, (void *)recv_buffer, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
 
     if (recv_size > 0) {
@@ -259,7 +259,7 @@ typedef void * (*THREADFUNCPTR)(void *);
 pthread_t autopilot_read_write_tid, gcs_write_tid, gcs_read_tid;
 
 int
-start_client_threads(MAVLinkTlsClient *client, DimClient *dim) {
+start_client_threads(MAVLinkTlsClient *client) {
   int result;
 
   result = pthread_create(&gcs_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_gcs_write_thread, client);
@@ -313,7 +313,7 @@ int init_commander(int& commander_sock) {
 
 int main(int argc, const char *argv[])
 {
-  if (argc !=2) {
+  if (argc != 2) {
     fprintf(stderr, "Usage: %s 10.243.45.201 \n", argv[0]);
     exit(EXIT_FAILURE);
   }
@@ -330,7 +330,7 @@ int main(int argc, const char *argv[])
   g_client = client;
   signal(SIGINT, signal_exit);
 
-  // start_client_threads(client, dim);
+  // start_client_threads(client);
   // wait_client_threads();
 
   // while 1
@@ -358,11 +358,13 @@ int main(int argc, const char *argv[])
           client->run = 1;
 
           dim->open(argv[1], 4433);
-          start_client_threads(client, dim);
+          start_client_threads(client);
         }
         if (strncmp(command, "disc", 4) == 0) { // disconnect
           client->run = 0;
           wait_client_threads();
+
+          dim->close();
         }
         if (strncmp(command, "auth", 4) == 0) { // auth
           client->run = 0;
@@ -432,7 +434,7 @@ int main(int argc, const char *argv[])
           for (i = 0; i < 256; i++)
           {
             abData[i]= (uint8_t)plaintext[i];
-            //abData[i]= 0xaa; 
+            //abData[i]= 0xaa;
             printf("%02X", abData[i]);
             if ((i < 255) && ((i + 1) % 32 == 0))
               printf("\r\n    ");

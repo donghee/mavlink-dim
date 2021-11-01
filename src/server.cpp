@@ -438,36 +438,41 @@ MAVLinkTlsServer::start_autopilot_write_thread(void *args)
 
 typedef void * (*THREADFUNCPTR)(void *);
 
+pthread_t autopilot_read_tid, gcs_read_tid, gcs_write_tid, autopilot_write_tid;
+
 int
-start_server_threads(Serial_Port *port, DimServer *dim)
+start_server_threads(MAVLinkTlsServer *server)
 {
   int result;
-  pthread_t autopilot_read_tid, gcs_read_tid, gcs_write_tid, autopilot_write_tid;
-
-  MAVLinkTlsServer *server;
-  server = new MAVLinkTlsServer(port, dim);
-  g_server = server;
-
-  signal(SIGINT, signal_exit);
-
 
   //result = pthread_create(&autopilot_read_tid, NULL, &start_autopilot_read_thread, (char *)"Autopilot Reading");
   result = pthread_create(&autopilot_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_read_thread, server);
 
-  if (result) { throw result; }
+  if (result) { return result; }
 
   result = pthread_create(&gcs_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_gcs_write_thread, server);
 
-  if (result) { throw result; }
+  if (result) { return result; }
 
   result = pthread_create(&gcs_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_gcs_read_thread, server);
 
-  if (result) { throw result; }
+  if (result) { return result; }
 
   result = pthread_create(&autopilot_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_write_thread, server);
 
-  if (result) { throw result; }
+  if (result) { return result; }
+  /*
+  pthread_join(gcs_write_tid, NULL);
+  pthread_join(gcs_read_tid, NULL);
+  pthread_join(autopilot_write_tid, NULL);
+  pthread_join(autopilot_read_tid, NULL);
+  */
 
+  return NULL;
+}
+
+int
+wait_server_threads() {
   pthread_join(gcs_write_tid, NULL);
   pthread_join(gcs_read_tid, NULL);
   pthread_join(autopilot_write_tid, NULL);
@@ -476,20 +481,78 @@ start_server_threads(Serial_Port *port, DimServer *dim)
   return NULL;
 }
 
+int init_commander(int& commander_sock) {
+  struct sockaddr_in commanderAddr;
+
+  commander_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+  memset(&commanderAddr, 0, sizeof(commanderAddr));
+  commanderAddr.sin_family = AF_INET;
+  commanderAddr.sin_addr.s_addr = INADDR_ANY;
+  commanderAddr.sin_port = htons(9120);
+
+  if (-1 == bind(commander_sock, (struct sockaddr *)&commanderAddr, sizeof(struct sockaddr))) {
+    std::cout << "bind fail " << std::endl;
+    close(commander_sock);
+    return -1;
+  }
+
+  return 0;
+}
+
 int main(int argc, const char *argv[])
 {
-  DimServer * dim;
+  int commander_sock;
+  init_commander(commander_sock);
+  struct sockaddr_in commanderClientAddr;
+  socklen_t commanderClientAddrLen = sizeof(struct sockaddr_in);
+
+  char commander_buffer[512];
+  int received = 0;
+
   if (argc !=3) {
     fprintf(stderr, "Usage: %s /dev/ttyTHS1 921600\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  Serial_Port *port = new Serial_Port(argv[1], atoi(argv[2]));
-  port->start();
+  DimServer *dim;
+  Serial_Port *port;
+  MAVLinkTlsServer *server;
 
   dim = new DimServer("0.0.0.0", 4433);
+  port = new Serial_Port(argv[1], atoi(argv[2]));
+  server = new MAVLinkTlsServer(port, dim);
+  g_server = server;
+
+  signal(SIGINT, signal_exit);
+
+  while (1) {
+    sleep(1);
+    if ((received = recvfrom(commander_sock, commander_buffer, 512, 0, (struct sockaddr *)&commanderClientAddr, &commanderClientAddrLen)) != -1) {
+      if (received > 4) {
+        printf("Received command: %s", commander_buffer);
+        char * command = new char[4]();
+        memcpy(command, &commander_buffer[0], 4);
+
+        if (strncmp(command, "auth", 4) == 0) { // connect
+          server->run = 0;
+          wait_server_threads();
+          server->run = 1;
+
+          //dim = new DimServer("0.0.0.0", 4433);
+          //dim->open("0.0.0.0", 4433);
+          start_server_threads(server);
+        }
+      }
+    }
+  }
+
+  /*
+  port = new Serial_Port(argv[1], atoi(argv[2]));
+  port->start();
 
   start_server_threads(port, dim);
+  */
 
   dim->close();
   port->stop();
