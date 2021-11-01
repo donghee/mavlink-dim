@@ -129,56 +129,56 @@ MAVLinkTlsServer::autopilot_read_message()
             }
           }
           printf("\n");
-            // get key 0
-            // uint8_t abPubKey0[64];
-            // uint16_t usSize0 = 0;
-            // memset(&abPubKey0, 0, sizeof(abPubKey0));
-            // ret = _kcmvpGetKey(abPubKey0, &usSize0, KCMVP_ARIA128_KEY, 0);
-            // if (ret < 0 ) {
-            //   printf("Error kcmvpGetKey: %d\n", ret);
-            // }
-            // printf("kcmvpGetKey Size: %d\n", usSize0);
-            // printf("kcmvpGetKey: \n");
-            // for (int i = 0; i < usSize0; i++) {
-            //   printf("%02X", abPubKey0[i]);
-            // }
+          // get key 0
+          // uint8_t abPubKey0[64];
+          // uint16_t usSize0 = 0;
+          // memset(&abPubKey0, 0, sizeof(abPubKey0));
+          // ret = _kcmvpGetKey(abPubKey0, &usSize0, KCMVP_ARIA128_KEY, 0);
+          // if (ret < 0 ) {
+          //   printf("Error kcmvpGetKey: %d\n", ret);
+          // }
+          // printf("kcmvpGetKey Size: %d\n", usSize0);
+          // printf("kcmvpGetKey: \n");
+          // for (int i = 0; i < usSize0; i++) {
+          //   printf("%02X", abPubKey0[i]);
+          // }
 
-            // printf("\r\n");
+          // printf("\r\n");
 
-            // set key 0
-            // abPubKey0[0] = 0x03;
-            // abPubKey0[1] = 0x10;
-            // abPubKey0[2] = 0x81;
-            // abPubKey0[3] = 0x8A;
-            // abPubKey0[4] = 0x36;
-            // abPubKey0[5] = 0xE2;
-            // abPubKey0[6] = 0xCB;
-            // abPubKey0[7] = 0x32;
-            // abPubKey0[8] = 0x0A;
-            // abPubKey0[9] = 0xFD;
-            // abPubKey0[10] = 0x92;
-            // abPubKey0[11] = 0xEC;
-            // abPubKey0[12] = 0xE3;
-            // abPubKey0[13] = 0x52;
-            // abPubKey0[14] = 0x3D;
-            // abPubKey0[15] = 0x1A;
+          // set key 0
+          // abPubKey0[0] = 0x03;
+          // abPubKey0[1] = 0x10;
+          // abPubKey0[2] = 0x81;
+          // abPubKey0[3] = 0x8A;
+          // abPubKey0[4] = 0x36;
+          // abPubKey0[5] = 0xE2;
+          // abPubKey0[6] = 0xCB;
+          // abPubKey0[7] = 0x32;
+          // abPubKey0[8] = 0x0A;
+          // abPubKey0[9] = 0xFD;
+          // abPubKey0[10] = 0x92;
+          // abPubKey0[11] = 0xEC;
+          // abPubKey0[12] = 0xE3;
+          // abPubKey0[13] = 0x52;
+          // abPubKey0[14] = 0x3D;
+          // abPubKey0[15] = 0x1A;
 
-            // ret = _kcmvpEraseKey(KCMVP_ARIA128_KEY, 0);
-            // if (ret < 0 ) {
-            //   printf("Error kcmvpEraseKey: %d\n", ret);
-            // }
+          // ret = _kcmvpEraseKey(KCMVP_ARIA128_KEY, 0);
+          // if (ret < 0 ) {
+          //   printf("Error kcmvpEraseKey: %d\n", ret);
+          // }
 
-            // ret = _kcmvpPutKey(KCMVP_ARIA128_KEY, 0, abPubKey0, 16);
-            // if (ret < 0 ) {
-            //   // printf("Error kcmvpPutKey: %d\n", ret);
-            //   printf("Error kcmvpGenerateKey: %d\n", ret);
-            // }
+          // ret = _kcmvpPutKey(KCMVP_ARIA128_KEY, 0, abPubKey0, 16);
+          // if (ret < 0 ) {
+          //   // printf("Error kcmvpPutKey: %d\n", ret);
+          //   printf("Error kcmvpGenerateKey: %d\n", ret);
+          // }
 
-            // ret = _kcmvpGenerateKey(KCMVP_ARIA128_KEY, 0, 0);
-            // if (ret < 0 ) {
-            //   // printf("Error kcmvpPutKey: %d\n", ret);
-            //   printf("Error kcmvpGenerateKey: %d\n", ret);
-            // }
+          // ret = _kcmvpGenerateKey(KCMVP_ARIA128_KEY, 0, 0);
+          // if (ret < 0 ) {
+          //   // printf("Error kcmvpPutKey: %d\n", ret);
+          //   printf("Error kcmvpGenerateKey: %d\n", ret);
+          // }
         }
 
         continue;
@@ -382,7 +382,7 @@ MAVLinkTlsServer::start_gcs_read_thread(void *args)
           usleep(100000); // 0.1s
           result = dim->tls_close_notify();
           //printf("\r\nresult: %d\r\n", result);
-	  //if (result == 0)
+          //if (result == 0)
 		  //dim->tls_close();
           //usleep(500000); // 0.5s
           dim->close();
@@ -461,12 +461,6 @@ start_server_threads(MAVLinkTlsServer *server)
   result = pthread_create(&autopilot_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_write_thread, server);
 
   if (result) { return result; }
-  /*
-  pthread_join(gcs_write_tid, NULL);
-  pthread_join(gcs_read_tid, NULL);
-  pthread_join(autopilot_write_tid, NULL);
-  pthread_join(autopilot_read_tid, NULL);
-  */
 
   return NULL;
 }
@@ -526,6 +520,11 @@ int main(int argc, const char *argv[])
 
   signal(SIGINT, signal_exit);
 
+  /*
+    port->start();
+    start_server_threads(port, dim);
+  */
+
   while (1) {
     sleep(1);
     if ((received = recvfrom(commander_sock, commander_buffer, 512, 0, (struct sockaddr *)&commanderClientAddr, &commanderClientAddrLen)) != -1) {
@@ -539,20 +538,26 @@ int main(int argc, const char *argv[])
           wait_server_threads();
           server->run = 1;
 
-  	  port->start();
+          port->start();
+          //char *auth_key = new char[received - 5]();
+          //memcpy(auth_key, &commander_buffer[5], received - 5);
+
+          mavlink_message_t message;
+          mavlink_auth_key_t auth_key;
+          memset(auth_key.key, '\0', 32);
+          //  memcpy(auth_key.key, &commander_buffer[5], received - 5);
+          mavlink_msg_auth_key_encode(1, 1, &message, &auth_key);
+
+          if (port) {
+            port->write_message(message);
+          }
+
           sendto(commander_sock, "success", 7, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
-          start_server_threads(server);
+          //start_server_threads(server);
         }
       }
     }
   }
-
-  /*
-  port = new Serial_Port(argv[1], atoi(argv[2]));
-  port->start();
-
-  start_server_threads(port, dim);
-  */
 
   dim->close();
   port->stop();
