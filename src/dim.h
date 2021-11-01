@@ -81,17 +81,17 @@ class DimSocket
    *
    * @return
    */
-  DimSocket(const char* server_ip, uint16_t port, bool bind = false) {
+  DimSocket() {
     // init pthread mutex, cond
     if (pthread_mutex_init(&lock, NULL)) {
       printf("\n mutex init failed\n");
       throw 1;
     }
 
-    _server_ip = server_ip;
-    _server_port = port;
-    _bind = bind;
-
+    // _server_ip = server_ip;
+    // _server_port = port;
+    // _bind = bind;
+    /*
     try {
       open(_server_ip, port, bind);
     } catch (...) {
@@ -99,6 +99,7 @@ class DimSocket
       close();
 //      throw std::runtime_error(strerror(errno));
     }
+    */
   };
 
   /**
@@ -136,6 +137,15 @@ class DimSocket
   int power_on();
   int power_off();
 
+  int encrypt(uint8_t* abData, int abData_len, uint8_t* abIv, int abIv_len, uint8_t* abAuth, int abAuth_len, uint8_t* abData1, uint8_t* abTag, int abTag_len);
+  int decrypt(int name, int key, const char* buffer, int buffer_len, uint8_t* plain_text);
+
+  int get_key(uint8_t *abPubKey0, int abPubKey0_len);
+  int set_key(const uint8_t *abPubKey0, int abPubKey0_len);
+
+  int generate_key();
+  int generate_random(uint8_t* abData, int abData_i);
+ 
   void init_poll();
 
   /**

@@ -13,7 +13,7 @@ class DimServer : public DimSocket
  public:
 
   DimServer(const char* server_ip, uint16_t port)
-	  : DimSocket {server_ip, port, true }
+      : DimSocket {}
   {
     try {
       open(server_ip, port);

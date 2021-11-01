@@ -13,6 +13,10 @@ extern "C" {
  */
 void DimClient::open(const char *ip, uint16_t port)
 {
+  _server_ip = ip;
+  _server_port = port;
+  _bind = false;
+
   _handshake_type = KSETLS_FULL_HANDSHAKE;
 
     // Client

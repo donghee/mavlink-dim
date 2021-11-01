@@ -11,8 +11,7 @@ class DimClient : public DimSocket
 {
  public:
 
-  DimClient(const char* server_ip, uint16_t port)
-	  : DimSocket {server_ip, port, false }
+  DimClient(): DimSocket{}
   {
     if (power_on() == -1) {
       std::cout << "power_on() error" << std::endl;

@@ -1,7 +1,7 @@
 #include "dim.h"
 
 extern "C" {
-#include "kse_ubuntu.h"
+  #include "kse_ubuntu.h"
 }
 
 int DimSocket::power_on()
@@ -36,7 +36,6 @@ int DimSocket::power_on()
     throw std::runtime_error(strerror(errno));
   }
 
-
   return result;
 }
 
@@ -53,6 +52,140 @@ void DimSocket::show_kse_power_info(kse_power_t kse_power)
   printf("  * MaxIoDataSize    : %d\r\n", kse_power.usMaxIoDataSize);
   printf("  * FileSize         : %d\r\n", kse_power.usInfoFileSize);
 }
+
+int DimSocket::encrypt(uint8_t* abData, int abData_len, uint8_t* abIv, int abIv_len, uint8_t* abAuth, int abAuth_len, uint8_t* abData1, uint8_t* abTag, int abTag_len) {
+    int16_t sRv;
+    int i;
+    uint16_t usSize0, usSize1;
+
+   // Encrypt abData to abData1
+    sRv = _kcmvpAriaGcm(abData1, abData, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
+                        abAuth, 128, abTag, 16, ENCRYPT);
+    return sRv;
+}
+
+int DimSocket::decrypt(int name, int key, const char* buffer, int buffer_len, uint8_t* plain_text) {
+  uint8_t abIv[16], abAuth[128], abTag[16], encrypted_text[256];
+
+  for(int i = 0 ; i < 16; i++) {
+    abIv[i] = buffer[i];
+  }
+
+  for(int i = 0 ; i < 128; i++) {
+    abAuth[i] = buffer[16+i];
+  }
+
+  for(int i = 0 ; i < 16; i++) {
+    abTag[i] = buffer[16+128+i];
+  }
+
+  for(int i = 0 ; i < 256; i++) {
+    encrypted_text[i] = buffer[16+128+16+i];
+  }
+
+  printf("\r\n");
+  printf("dim_decrypt()\r\n");
+  printf("  * Decrypted Plaintext \r\n    ");
+
+  int ret;
+
+  ret = _kcmvpAriaGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16, abAuth, 128, abTag, 16, DECRYPT);
+  for (int i = 0; i < 256; i++) {
+    printf("%02X", plain_text[i]);
+
+    if ((i < 255) && ((i + 1) % 32 == 0)) {
+      printf("\r\n    ");
+    }
+  }
+  printf("\n");
+}
+
+int DimSocket::get_key(uint8_t *abPubKey0, int abPubKey0_len) {
+    int ret;
+
+    // get key 0
+    //uint8_t abPubKey0[64];
+    uint16_t usSize0 = 0;
+    //memset(&abPubKey0, 0, sizeof(abPubKey0));
+    memset(&abPubKey0, 0, abPubKey0_len);
+    ret = _kcmvpGetKey(abPubKey0, &usSize0, KCMVP_ARIA128_KEY, 0);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpGetKey: %d\n", ret);
+    else
+      printf("Error kcmvpGetKey: %d\n", ret);
+
+    printf("kcmvpGetKey Size: %d\n", usSize0);
+    printf("kcmvpGetKey: ");
+    for (int i = 0; i < usSize0; i++) {
+      printf("%02X", abPubKey0[i]);
+    }
+
+    printf("\r\n");
+    return 0;
+}
+
+int DimSocket::set_key(const uint8_t *abPubKey0, int abPubKey0_len) {
+    int ret;
+
+    // set key 0
+    ret = _kcmvpEraseKey(KCMVP_ARIA128_KEY, 0);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpEraseKey: %d\n", ret);
+    else
+      printf("Error kcmvpEraseKey: %d\n", ret);
+
+    ret = _kcmvpPutKey(KCMVP_ARIA128_KEY, 0, (uint8_t *) abPubKey0, 16);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpPutKey: %d\n", ret);
+    else
+      printf("Error kcmvpPutKey: %d\n", ret);
+
+    return 0;
+}
+
+int DimSocket::generate_key() {
+    int16_t ret;
+
+    ret = _kcmvpEraseKey(KCMVP_ARIA128_KEY, 0);
+    if (ret == KSE_SUCCESS)
+      printf("Success kcmvpEraseKey: %d\n", ret);
+    else
+      printf("Error kcmvpEraseKey: %d\n", ret);
+
+    ret = _kcmvpGenerateKey(KCMVP_ARIA128_KEY, 0, NOT_USED);
+    if (ret == KSE_SUCCESS )
+      printf("Success kcmvpGenerateKey: %d\n", ret);
+    else 
+      printf("Error kcmvpGenerateKey: %d\n", ret);
+
+    return ret;
+}
+
+int DimSocket::generate_random(uint8_t* abData, int abData_len) {
+    int i;
+    int16_t sRv;
+    //uint8_t abData[256];
+
+    sRv = _kcmvpDrbg(abData, 256);
+    if (sRv == KSE_SUCCESS)
+        printf("Success kcmvpDrbg: %d\n", sRv);
+    else
+    {
+        printf("Error kcmvpDrbg: Fail(-0x%04X)\r\n", -sRv);
+        return -1;
+    }
+    printf("  * Random Number :\r\n    ");
+    for (i = 0; i < abData_len; i++)
+    {
+        printf("%02X", abData[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+
+    return sRv;
+}
+
 
 /**
  * initializing file descript to use poll()

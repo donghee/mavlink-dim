@@ -13,6 +13,10 @@ extern "C" {
  */
 void DimServer::open(const char *ip, uint16_t port)
 {
+  _server_ip = ip;
+  _server_port = port;
+  _bind = true;
+
   if (power_on() == -1) {
     return;
   }
