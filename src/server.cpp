@@ -519,8 +519,8 @@ int main(int argc, const char *argv[])
   Serial_Port *port;
   MAVLinkTlsServer *server;
 
-  dim = new DimServer("0.0.0.0", 4433);
   port = new Serial_Port(argv[1], atoi(argv[2]));
+  dim = new DimServer("0.0.0.0", 4433);
   server = new MAVLinkTlsServer(port, dim);
   g_server = server;
 
@@ -539,8 +539,8 @@ int main(int argc, const char *argv[])
           wait_server_threads();
           server->run = 1;
 
-          //dim = new DimServer("0.0.0.0", 4433);
-          //dim->open("0.0.0.0", 4433);
+  	  port->start();
+          sendto(commander_sock, "success", 7, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
           start_server_threads(server);
         }
       }
