@@ -71,6 +71,16 @@ MAVLinkTlsServer::autopilot_read_message()
         continue;
       }
 
+      if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
+        mavlink_auth_key_t auth_key_msg;
+        mavlink_msg_auth_key_decode(&message, &auth_key_msg);
+        printf("\n");
+        for(int i = 0 ; i < 16; i++) {
+          printf("%02X", auth_key_msg.key[i]);
+        }
+        printf("\n");
+      }
+
       if (message.msgid == MAVLINK_MSG_ID_ENCAPSULATED_DATA) {
         mavlink_encapsulated_data_t encapsulated_data;
         mavlink_msg_encapsulated_data_decode(&message, &encapsulated_data);
@@ -543,16 +553,16 @@ int main(int argc, const char *argv[])
           //memcpy(auth_key, &commander_buffer[5], received - 5);
 
           mavlink_message_t message;
-          mavlink_auth_key_t auth_key;
-          memset(auth_key.key, '\0', 32);
+          mavlink_auth_key_t auth_key_msg;
+          memset(auth_key_msg.key, '\0', 32);
           //  memcpy(auth_key.key, &commander_buffer[5], received - 5);
-          mavlink_msg_auth_key_encode(1, 1, &message, &auth_key);
+          mavlink_msg_auth_key_encode(1, 1, &message, &auth_key_msg);
 
           if (port) {
             port->write_message(message);
+            sendto(commander_sock, "success", 7, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
           }
 
-          sendto(commander_sock, "success", 7, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
           //start_server_threads(server);
         }
       }
