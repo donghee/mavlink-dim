@@ -503,6 +503,7 @@ int main(int argc, const char *argv[])
 
   char commander_buffer[512];
   int received = 0;
+  bool is_authentication = false;
 
   if (argc !=3) {
     fprintf(stderr, "Usage: %s /dev/ttyTHS1 921600\n", argv[0]);
@@ -570,8 +571,15 @@ int main(int argc, const char *argv[])
             }
             continue;
           }
+        }
 
-          //start_server_threads(server);
+        if (strncmp(command, "start", 4) == 0 && is_authentication) { // start handshake
+          port->start();
+          start_server_threads(server);
+
+          // not reatched
+          wait_server_threads();
+          break;
         }
       }
     }
