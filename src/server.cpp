@@ -543,7 +543,7 @@ int main(int argc, const char *argv[])
           mavlink_message_t message;
           mavlink_auth_key_t auth_key_msg;
           memset(auth_key_msg.key, '\0', 32);
-          //  memcpy(auth_key.key, &commander_buffer[5], received - 5);
+          memcpy(auth_key_msg.key, &commander_buffer[5], received - 5);
           mavlink_msg_auth_key_encode(1, 1, &message, &auth_key_msg);
 
           if (port) {
