@@ -559,7 +559,8 @@ int main(int argc, const char *argv[])
           if (port) {
             port->write_message(message);
             sleep(4);
-            if (port->read_message(message)) {
+            if (port->read_message(message) > 0) {
+              printf("read message\n");
               if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
                 mavlink_auth_key_t ack_auth_key_msg;
                 mavlink_msg_auth_key_decode(&message, &ack_auth_key_msg);
