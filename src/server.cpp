@@ -71,16 +71,6 @@ MAVLinkTlsServer::autopilot_read_message()
         continue;
       }
 
-      if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
-        mavlink_auth_key_t auth_key_msg;
-        mavlink_msg_auth_key_decode(&message, &auth_key_msg);
-        printf("\n");
-        for(int i = 0 ; i < 16; i++) {
-          printf("%02X", auth_key_msg.key[i]);
-        }
-        printf("\n");
-      }
-
       if (message.msgid == MAVLINK_MSG_ID_ENCAPSULATED_DATA) {
         mavlink_encapsulated_data_t encapsulated_data;
         mavlink_msg_encapsulated_data_decode(&message, &encapsulated_data);
@@ -564,7 +554,7 @@ int main(int argc, const char *argv[])
                   port->stop();
                   mavlink_auth_key_t ack_auth_key_msg;
                   mavlink_msg_auth_key_decode(&message, &ack_auth_key_msg);
-                  printf("\n");
+                  printf("AUTH KEY:\n");
                   for(int i = 0 ; i < 16; i++) {
                     printf("%02X", ack_auth_key_msg.key[i]);
                   }
