@@ -524,6 +524,7 @@ int main(int argc, const char *argv[])
   /*
     port->start();
     start_server_threads(server);
+    wait_server_threads();
   */
 
   while (1) {
@@ -561,9 +562,10 @@ int main(int argc, const char *argv[])
                   }
                   printf("\n");
                   if (memcmp(auth_key_msg.key, ack_auth_key_msg.key, 16) == 0) {
-  		    is_authentication = true;
+                    is_authentication = true;
                     sendto(commander_sock, "Auth key is matched", 19, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
                   } else {
+                    is_authentication = false;
                     sendto(commander_sock, "Auth key does not match", 23, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
                   }
                   break;

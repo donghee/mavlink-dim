@@ -149,7 +149,7 @@ MAVLinkTlsClient::gcs_write_message()
     printf("Received message from fc with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
     send_size = mavlink_msg_to_send_buffer((uint8_t *)send_buffer, &message);
     // debug
-    // debug_mavlink_msg_buffer(send_buffer, send_size);
+    debug_mavlink_msg_buffer(send_buffer, send_size);
     sendto(sock, send_buffer, send_size, 0, (struct sockaddr *)&gcAddr, sizeof(struct sockaddr_in));
   }
 }
@@ -352,7 +352,7 @@ int main(int argc, const char *argv[])
         char * command = new char[4]();
         memcpy(command, &commander_buffer[0], 4);
 
-        if (strncmp(command, "conn", 4) == 0) { // connect
+        if (strncmp(command, "start", 4) == 0) { // connect
           client->run = 0;
           wait_client_threads();
           client->run = 1;
@@ -360,7 +360,7 @@ int main(int argc, const char *argv[])
           dim->open(argv[1], 4433);
           start_client_threads(client);
         }
-        if (strncmp(command, "disc", 4) == 0) { // disconnect
+        if (strncmp(command, "stop", 4) == 0) { // disconnect
           client->run = 0;
           wait_client_threads();
 
@@ -374,7 +374,7 @@ int main(int argc, const char *argv[])
           memcpy(auth_key, &commander_buffer[5], received - 5);
           printf("auth key: %s", auth_key);
         }
-        if (strncmp(command, "decr", 4) == 0) { // decrypt
+        if (strncmp(command, "decrypt", 4) == 0) { // decrypt
           client->run = 0;
           wait_client_threads();
 
@@ -389,7 +389,7 @@ int main(int argc, const char *argv[])
           sendto(commander_sock, plaintext, 256, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
         }
 
-        if (strncmp(command, "rand", 4) == 0) { // random
+        if (strncmp(command, "random", 4) == 0) { // random
           client->run = 0;
           wait_client_threads();
 
@@ -398,7 +398,7 @@ int main(int argc, const char *argv[])
           sendto(commander_sock, buffer, 16, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
         }
 
-        if (strncmp(command, "encr", 4) == 0) { // encrypt
+        if (strncmp(command, "encrypt", 4) == 0) { // encrypt
           client->run = 0;
           wait_client_threads();
 
