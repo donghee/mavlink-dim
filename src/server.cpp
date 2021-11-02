@@ -559,26 +559,25 @@ int main(int argc, const char *argv[])
           if (port) {
             port->write_message(message);
             while(1) {
-            if (port->read_message(message) > 0) {
-              printf("read message\n");
-              if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
-                mavlink_auth_key_t ack_auth_key_msg;
-                mavlink_msg_auth_key_decode(&message, &ack_auth_key_msg);
-                printf("\n");
-                for(int i = 0 ; i < 16; i++) {
-                  printf("%02X", ack_auth_key_msg.key[i]);
-                }
-                printf("\n");
-                if (memcmp(auth_key_msg.key, ack_auth_key_msg.key, 16) == 0) {
-                  sendto(commander_sock, "Auth Key is Matched", 19, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+              if (port->read_message(message) > 0) {
+                if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
                   port->stop();
+                  mavlink_auth_key_t ack_auth_key_msg;
+                  mavlink_msg_auth_key_decode(&message, &ack_auth_key_msg);
+                  printf("\n");
+                  for(int i = 0 ; i < 16; i++) {
+                    printf("%02X", ack_auth_key_msg.key[i]);
+                  }
+                  printf("\n");
+                  if (memcmp(auth_key_msg.key, ack_auth_key_msg.key, 16) == 0) {
+                    sendto(commander_sock, "Auth key is matched", 19, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+                  } else {
+                    sendto(commander_sock, "Auth key does not match", 23, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+                  }
                   break;
                 }
               }
             }
-            }
-            sendto(commander_sock, "Auth Key does not match", 23, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
-            port->stop();
             continue;
           }
 
