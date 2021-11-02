@@ -532,14 +532,14 @@ int main(int argc, const char *argv[])
 
   /*
     port->start();
-    start_server_threads(port, dim);
+    start_server_threads(server);
   */
 
   while (1) {
     sleep(1);
     if ((received = recvfrom(commander_sock, commander_buffer, 512, 0, (struct sockaddr *)&commanderClientAddr, &commanderClientAddrLen)) != -1) {
       if (received > 4) {
-        printf("Received command: %s", commander_buffer);
+        printf("Received command: %s\n", commander_buffer);
         char * command = new char[4]();
         memcpy(command, &commander_buffer[0], 4);
 
@@ -549,8 +549,6 @@ int main(int argc, const char *argv[])
           server->run = 1;
 
           port->start();
-          //char *auth_key = new char[received - 5]();
-          //memcpy(auth_key, &commander_buffer[5], received - 5);
 
           mavlink_message_t message;
           mavlink_auth_key_t auth_key_msg;
@@ -560,7 +558,26 @@ int main(int argc, const char *argv[])
 
           if (port) {
             port->write_message(message);
-            sendto(commander_sock, "success", 7, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+            sleep(1);
+            if (port->read_message(message)) {
+              if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
+                mavlink_auth_key_t ack_auth_key_msg;
+                mavlink_msg_auth_key_decode(&message, &ack_auth_key_msg);
+                printf("\n");
+                for(int i = 0 ; i < 16; i++) {
+                  printf("%02X", ack_auth_key_msg.key[i]);
+                }
+                printf("\n");
+                if (memcmp(auth_key_msg.key, ack_auth_key_msg.key, 16) == 0) {
+                  sendto(commander_sock, "Auth Key is Matched", 19, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+                  port->stop();
+                  continue;
+                }
+              }
+            }
+            sendto(commander_sock, "Auth Key does not match", 23, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+            port->stop();
+            continue;
           }
 
           //start_server_threads(server);
