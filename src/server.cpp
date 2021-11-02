@@ -558,7 +558,7 @@ int main(int argc, const char *argv[])
 
           if (port) {
             port->write_message(message);
-            sleep(4);
+            while(1) {
             if (port->read_message(message) > 0) {
               printf("read message\n");
               if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
@@ -572,9 +572,10 @@ int main(int argc, const char *argv[])
                 if (memcmp(auth_key_msg.key, ack_auth_key_msg.key, 16) == 0) {
                   sendto(commander_sock, "Auth Key is Matched", 19, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
                   port->stop();
-                  continue;
+                  break;
                 }
               }
+            }
             }
             sendto(commander_sock, "Auth Key does not match", 23, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
             port->stop();
