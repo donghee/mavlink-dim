@@ -292,7 +292,7 @@ wait_client_threads() {
 }
 
 
-int init_commander(int& commander_sock) {
+int init_commander(int& commander_sock, int port) {
   struct sockaddr_in commanderAddr;
 
   commander_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -300,7 +300,7 @@ int init_commander(int& commander_sock) {
   memset(&commanderAddr, 0, sizeof(commanderAddr));
   commanderAddr.sin_family = AF_INET;
   commanderAddr.sin_addr.s_addr = INADDR_ANY;
-  commanderAddr.sin_port = htons(9120);
+  commanderAddr.sin_port = htons(port);
 
   if (-1 == bind(commander_sock, (struct sockaddr *)&commanderAddr, sizeof(struct sockaddr))) {
     std::cout << "bind fail " << std::endl;
@@ -313,19 +313,30 @@ int init_commander(int& commander_sock) {
 
 int main(int argc, const char *argv[])
 {
-  if (argc != 2) {
-    fprintf(stderr, "Usage: %s 10.243.45.201 \n", argv[0]);
+  int commander_sock;
+  int mavlink_out_address;
+  int mavlink_out_port;
+  int commander_in_port;
+
+  char dim_tls_server_ip[16];
+
+  if (argc < 4) {
+    fprintf(stderr, "Usage: %s 10.243.45.201 <mavlink_out_port> <command_listen_port>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  int mavlink_sock, commander_sock;
-  mavlink_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  init_commander(commander_sock);
+  strcpy(dim_tls_server_ip, argv[1]);
+  mavlink_out_port = atoi(argv[2]);
+  commander_in_port = atoi(argv[3]);
+
+  printf("Running Client <Server IP: %s, MAVLink PORT: %u, Commander PORT: %u>\n", dim_tls_server_ip, mavlink_out_port, commander_in_port);
+
+  init_commander(commander_sock, commander_in_port);
   struct sockaddr_in commanderClientAddr;
   socklen_t commanderClientAddrLen = sizeof(struct sockaddr_in);
 
   DimClient *dim = new DimClient();
-  MAVLinkTlsClient *client = new MAVLinkTlsClient(mavlink_sock, dim);
+  MAVLinkTlsClient *client = new MAVLinkTlsClient(dim, "127.0.0.1\0", mavlink_out_port);
 
   g_client = client;
   signal(SIGINT, signal_exit);
@@ -357,7 +368,7 @@ int main(int argc, const char *argv[])
           wait_client_threads();
           client->run = 1;
 
-          dim->open(argv[1], 4433);
+          dim->open(dim_tls_server_ip, 4433);
           start_client_threads(client);
         }
         if (strncmp(command, "stop", 4) == 0) { // disconnect

@@ -1,6 +1,9 @@
 /**
+
+
  * @file client.h
- *
+ 
+*
  * @brief DIM TLS Client
  *
  * TCP TLS client for communication MAVLink endpoints in GCS
@@ -41,35 +44,23 @@ class MAVLinkTlsClient
    *
    * @return
    */
-  explicit MAVLinkTlsClient(int _sock, DimClient *_dim) {
-    sock = _sock;
+    explicit MAVLinkTlsClient(DimClient *_dim, const char* mavlink_out_ip, int mavlink_out_port) {
     dim = _dim;
 
-    // recv UDP socket
-    memset(&locAddr, 0, sizeof(locAddr));
-    locAddr.sin_family = AF_INET;
-    locAddr.sin_addr.s_addr = INADDR_ANY;
-    locAddr.sin_port = htons(14551);
-
-    /* Bind the socket to port 14551 - necessary to receive packets from GCS like a QGC */
-    if (-1 == bind(sock, (struct sockaddr *)&locAddr, sizeof(struct sockaddr))) {
-      std::cout << "bind fail " << std::endl;
-      close(sock);
-      return;
+    sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock == -1) {
+      fprintf(stderr, "MAVLink socket failed\n");
+      ::exit(EXIT_FAILURE);
     }
 
-    if (fcntl(sock, F_SETFL, O_NONBLOCK | O_ASYNC) < 0)
-    {
-      memset(&gcAddr, 0, sizeof(gcAddr));
+    if (fcntl(sock, F_SETFL, O_NONBLOCK | O_ASYNC) < 0) {
+      fprintf(stderr, "MAVLink socket set NONBLOCK flag failed\n");
     }
 
-    // send UDP socket
-    char target_ip[100];
-    strcpy(target_ip, "127.0.0.1");
-
+    memset(&gcAddr, 0, sizeof(gcAddr));
     gcAddr.sin_family = AF_INET;
-    gcAddr.sin_addr.s_addr = inet_addr(target_ip);
-    gcAddr.sin_port = htons(14550);
+    gcAddr.sin_addr.s_addr = inet_addr(mavlink_out_ip);
+    gcAddr.sin_port = htons(mavlink_out_port);
 
     run = 1;
   }
@@ -163,5 +154,5 @@ class MAVLinkTlsClient
   int sock;
 
   struct sockaddr_in gcAddr;
-  struct sockaddr_in locAddr;
+    //struct sockaddr_in locAddr;
 };

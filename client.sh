@@ -6,4 +6,4 @@ make mavlink_dim_client
 # linux pc
 ./tools/reset-usbhub.sh
 
-./mavlink_dim_client 223.171.56.36
+./mavlink_dim_client 223.171.56.36 14450 9120
