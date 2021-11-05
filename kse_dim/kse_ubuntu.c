@@ -770,7 +770,7 @@ int16_t _ksePowerOn(uint8_t *pbVer, uint8_t *pbLifeCycle,
 {
     int iRv;
     uint16_t usLen;
-    int16_t i, sRv, sCount;
+    int16_t i = 0, sRv, sCount;
     libusb_device **ppstDevs;
     libusb_device_handle *hDev = NULL;
     struct libusb_device_descriptor stDesc;
@@ -784,6 +784,7 @@ int16_t _ksePowerOn(uint8_t *pbVer, uint8_t *pbLifeCycle,
         return KSE_FAIL_ALREADY_POWERED_ON;
     }
 
+find:
     // Find USB DIM.
     iRv = libusb_init(NULL);
     if (iRv < 0)
@@ -804,7 +805,7 @@ int16_t _ksePowerOn(uint8_t *pbVer, uint8_t *pbLifeCycle,
         return KSE_FAIL_USB_NO_DEVICES;
     }
 
-    for (i = 0; i < sCount; i++)
+    for (; i < sCount; i++)
     {
         iRv = libusb_get_device_descriptor(ppstDevs[i], &stDesc);
         if (iRv < 0)
@@ -855,6 +856,11 @@ int16_t _ksePowerOn(uint8_t *pbVer, uint8_t *pbLifeCycle,
         _debugPrintErrStr("_ksePowerOn[6]", KSE_FAIL_USB_CLAIM_INTERFACE, iRv);
 #endif
         _usbClose();
+	i++;
+	if (i < sCount) {
+          printf("Trying to open another USB DIM\r\n");
+	  goto find;
+	}
         return KSE_FAIL_USB_CLAIM_INTERFACE;
     }
 
