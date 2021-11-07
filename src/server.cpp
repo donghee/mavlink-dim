@@ -535,6 +535,64 @@ int main(int argc, const char *argv[])
         char * command = new char[4]();
         memcpy(command, &commander_buffer[0], 4);
 
+        // read encrypted data from fc
+        if (strncmp(command, "read ", 4) == 0) {
+          server->run = 0;
+          wait_server_threads();
+          server->run = 1;
+
+          port->start();
+
+          mavlink_message_t message;
+          uint8_t encrypted_text[256];
+
+          if (port) {
+            port->write_message(message);
+            while(1) {
+              if (port->read_message(message) > 0) {
+                if (message.msgid == MAVLINK_MSG_ID_ENCAPSULATED_DATA) {
+                  mavlink_encapsulated_data_t encapsulated_data;
+                  mavlink_msg_encapsulated_data_decode(&message, &encapsulated_data);
+
+                  if (encapsulated_data.seqnr < 2) { // 0,1
+                    for(int i = 0 ; i < 128; i++) {
+                      encrypted_text[i+(128*encapsulated_data.seqnr)] = encapsulated_data.data[i];
+                    }
+                  } else { // 2
+                    uint8_t plain_text[256], abIv[16], abAuth[128], abTag[16];
+
+                    for(int i = 0 ; i < 16; i++) {
+                      abIv[i] = encapsulated_data.data[i];
+                    }
+
+                    for(int i = 0 ; i < 128; i++) {
+                      abAuth[i] = encapsulated_data.data[16+i];
+                    }
+
+                    for(int i = 0 ; i < 16; i++) {
+                      abTag[i] = encapsulated_data.data[16+128+i];
+                    }
+                    printf("\n");
+                    printf("  * Received Encrypted Data using MAVLink from FC \r\n    ");
+                    for (int i = 0; i < 256; i++) {
+                      printf("%02X", encrypted_text[i]);
+                      if ((i < 255) && ((i + 1) % 32 == 0)) {
+                        printf("\r\n    ");
+                      }
+                    }
+                    printf("\r\n");
+                    sendto(commander_sock, encrypted_text, 256, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+                    break;
+                  }
+                }
+              }
+            }
+            continue;
+          }
+        }
+
+//
+
         if (strncmp(command, "auth", 4) == 0) { // connect
           server->run = 0;
           wait_server_threads();
