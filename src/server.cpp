@@ -593,7 +593,6 @@ int main(int argc, const char *argv[])
                 }
               }
             }
-            continue;
           }
         }
 
@@ -630,9 +629,11 @@ int main(int argc, const char *argv[])
               port->write_message(messages[i]);
               sleep(1);
             }
-            continue;
+
           }
+
           port->stop();
+          memset(commander_buffer, '\0', 512);
         }
 
         if (strncmp(command, "auth", 4) == 0) { // connect
