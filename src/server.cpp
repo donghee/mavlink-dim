@@ -604,32 +604,33 @@ int main(int argc, const char *argv[])
 
           port->start();
 
-          mavlink_message_t messages[3];
+          mavlink_message_t message0, message1, message2;
           uint8_t encrypted_text[512];
 
-          mavlink_encapsulated_data_t send_encapsulated_data;
-          memset(send_encapsulated_data.data, '\0', 253);
-          send_encapsulated_data.seqnr = 0;
-          memcpy(send_encapsulated_data.data, &commander_buffer[5], 128);
-          mavlink_msg_encapsulated_data_encode(1, 1, &messages[0], &send_encapsulated_data);
+          mavlink_encapsulated_data_t send_encapsulated_data0, send_encapsulated_data1 ,send_encapsulated_data2;
 
-          send_encapsulated_data.seqnr = 1;
-          memset(send_encapsulated_data.data, '\0', 253);
-          memcpy(send_encapsulated_data.data, &commander_buffer[5+128], 128);
-          mavlink_msg_encapsulated_data_encode(1, 1, &messages[1], &send_encapsulated_data);
+          send_encapsulated_data0.seqnr = 0;
+          memset(send_encapsulated_data0.data, '\0', 253);
+          memcpy(send_encapsulated_data0.data, &commander_buffer[5], 128);
+          mavlink_msg_encapsulated_data_encode(1, 1, &message0, &send_encapsulated_data0);
 
-          send_encapsulated_data.seqnr = 2;
-          memset(send_encapsulated_data.data, '\0', 253);
-          memcpy(send_encapsulated_data.data, &commander_buffer[5+128+128], 16+128+16);
-          mavlink_msg_encapsulated_data_encode(1, 1, &messages[2], &send_encapsulated_data);
+          send_encapsulated_data1.seqnr = 1;
+          memset(send_encapsulated_data1.data, '\0', 253);
+          memcpy(send_encapsulated_data1.data, &commander_buffer[5+128], 128);
+          mavlink_msg_encapsulated_data_encode(1, 1, &message1, &send_encapsulated_data1);
+
+          send_encapsulated_data2.seqnr = 2;
+          memset(send_encapsulated_data2.data, '\0', 253);
+          memcpy(send_encapsulated_data2.data, &commander_buffer[5+128+128], 16+128+16);
+          mavlink_msg_encapsulated_data_encode(1, 1, &message2, &send_encapsulated_data2);
 
           if (port) {
-            for (int i = 0 ; i < 3; i++) {
-              printf("send message to fc %d\n", i);
-              port->write_message(messages[i]);
+              port->write_message(message0);
               sleep(1);
-            }
-
+              port->write_message(message1);
+              sleep(1);
+              port->write_message(message2);
+              sleep(1);
           }
 
           port->stop();
