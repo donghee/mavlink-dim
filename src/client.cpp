@@ -390,12 +390,12 @@ int main(int argc, const char *argv[])
           wait_client_threads();
 
           printf("\r\ncommander_buffer: received: %d\r\n", received);
-          uint8_t buffer [16+128+16+256];
+          uint8_t buffer [256+16+128+16];
           uint8_t plaintext [256];
           memcpy(buffer, &commander_buffer[8], received - 8);
 
           printf("dim->decrypt() \r\n");
-          dim->decrypt(1, 1, (const char*)buffer, 16+128+16+256, plaintext);
+          dim->decrypt(1, 1, (const char*)buffer, 256+16+128+16, plaintext);
 
           sendto(commander_sock, plaintext, 256, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
         }
@@ -454,14 +454,14 @@ int main(int argc, const char *argv[])
           printf("\r\ndim->encrypt() \r\n");
           dim->encrypt(abData, 256, abIv, 16, abAuth, 128, abData1, abTag, 16);
 
-          uint8_t result [16+128+16+256];
-          memcpy(result, &abIv[0], 16);
-          memcpy(result+16, &abAuth[0], 128);
-          memcpy(result+16+128, &abTag[0], 16);
-          memcpy(result+16+128+16, &abData1[0], 256);
+          uint8_t result [256+16+128+16];
+          memcpy(result, &abData1[0], 256);
+          memcpy(result+256, &abIv[0], 16);
+          memcpy(result+256+16, &abAuth[0], 128);
+          memcpy(result+256+16+128, &abTag[0], 16);
 
           printf("  * Result Data :\r\n    ");
-          for (i = 0; i < 16+128+16+256; i++)
+          for (i = 0; i < 256+16+128+16; i++)
           {
             printf("%02X", result[i]);
             if ((i < 512) && ((i + 1) % 32 == 0))
@@ -469,7 +469,7 @@ int main(int argc, const char *argv[])
           }
 
           // send UDP socket
-          sendto(commander_sock, result, 16+128+16+256, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+          sendto(commander_sock, result, 256+16+128+16, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
         }
       }
     }

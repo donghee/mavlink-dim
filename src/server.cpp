@@ -535,8 +535,8 @@ int main(int argc, const char *argv[])
         char * command = new char[4]();
         memcpy(command, &commander_buffer[0], 4);
 
-        // read encrypted data from fc
-        if (strncmp(command, "read ", 4) == 0) {
+        // receive encrypted data from fc with ENCAPSULATED DATA message
+        if (strncmp(command, "receive ", 4) == 0) {
           server->run = 0;
           wait_server_threads();
           server->run = 1;
@@ -545,9 +545,14 @@ int main(int argc, const char *argv[])
 
           mavlink_message_t message;
           uint8_t encrypted_text[256];
+          // mavlink_encapsulated_data_key_t encapsulated_data;
+          // memset(encapsulated_data.key, '\0', 32);
+          // memcpy(encapsulated_data.key, &commander_buffer[5], received - 5);
+          // mavlink_msg_encapsulated_data_encode(1, 1, &message, &encapsulated_data);
 
           if (port) {
-            port->write_message(message);
+            //port->write_message(message);
+            usleep(100);
             while(1) {
               if (port->read_message(message) > 0) {
                 if (message.msgid == MAVLINK_MSG_ID_ENCAPSULATED_DATA) {
@@ -558,6 +563,7 @@ int main(int argc, const char *argv[])
                     for(int i = 0 ; i < 128; i++) {
                       encrypted_text[i+(128*encapsulated_data.seqnr)] = encapsulated_data.data[i];
                     }
+                    // memcpy(&encrypted_text[128*encapsulated_data.seqnr], &encapsulated_data.data[0], 128);
                   } else { // 2
                     uint8_t plain_text[256], abIv[16], abAuth[128], abTag[16];
 
@@ -591,7 +597,41 @@ int main(int argc, const char *argv[])
           }
         }
 
-//
+        // send encrypted data to fc with ENCAPSULATED DATA message
+        if (strncmp(command, "send ", 4) == 0) {
+          server->run = 0;
+          wait_server_threads();
+          server->run = 1;
+
+          port->start();
+
+          mavlink_message_t messages[3];
+          uint8_t encrypted_text[512];
+
+          mavlink_encapsulated_data_t send_encapsulated_data;
+          memset(send_encapsulated_data.data, '\0', 253);
+          send_encapsulated_data.seqnr = 0;
+          memcpy(send_encapsulated_data.data, &commander_buffer[5], 128);
+          mavlink_msg_encapsulated_data_encode(1, 1, &messages[0], &send_encapsulated_data);
+
+          send_encapsulated_data.seqnr = 1;
+          memset(send_encapsulated_data.data, '\0', 253);
+          memcpy(send_encapsulated_data.data, &commander_buffer[5+128], 128);
+          mavlink_msg_encapsulated_data_encode(1, 1, &messages[1], &send_encapsulated_data);
+
+          send_encapsulated_data.seqnr = 2;
+          memset(send_encapsulated_data.data, '\0', 253);
+          memcpy(send_encapsulated_data.data, &commander_buffer[5+128+128], 16+128+16);
+          mavlink_msg_encapsulated_data_encode(1, 1, &messages[2], &send_encapsulated_data);
+
+          if (port) {
+            for (int i = 0 ; i < 3; i++) {
+              port->write_message(messages[i]);
+              sleep(1);
+            }
+            continue;
+          }
+        }
 
         if (strncmp(command, "auth", 4) == 0) { // connect
           server->run = 0;

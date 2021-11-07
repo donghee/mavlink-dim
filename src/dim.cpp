@@ -67,20 +67,20 @@ int DimSocket::encrypt(uint8_t* abData, int abData_len, uint8_t* abIv, int abIv_
 int DimSocket::decrypt(int name, int key, const char* buffer, int buffer_len, uint8_t* plain_text) {
   uint8_t abIv[16], abAuth[128], abTag[16], encrypted_text[256];
 
+  for(int i = 0 ; i < 256; i++) {
+    encrypted_text[i] = buffer[i];
+  }
+
   for(int i = 0 ; i < 16; i++) {
-    abIv[i] = buffer[i];
+    abIv[i] = buffer[256+i];
   }
 
   for(int i = 0 ; i < 128; i++) {
-    abAuth[i] = buffer[16+i];
+    abAuth[i] = buffer[256+16+i];
   }
 
   for(int i = 0 ; i < 16; i++) {
-    abTag[i] = buffer[16+128+i];
-  }
-
-  for(int i = 0 ; i < 256; i++) {
-    encrypted_text[i] = buffer[16+128+16+i];
+    abTag[i] = buffer[256+16+128+i];
   }
 
   printf("\r\n");
