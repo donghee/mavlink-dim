@@ -626,11 +626,13 @@ int main(int argc, const char *argv[])
 
           if (port) {
             for (int i = 0 ; i < 3; i++) {
+              printf("send message to fc %d\n", i);
               port->write_message(messages[i]);
               sleep(1);
             }
             continue;
           }
+          port->stop();
         }
 
         if (strncmp(command, "auth", 4) == 0) { // connect
