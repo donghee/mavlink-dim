@@ -1,0 +1,529 @@
+make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+# GNU Make 4.2.1
+# Built for x86_64-pc-linux-gnu
+# Copyright (C) 1988-2016 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+# Make data base, printed on Sun Sep 19 13:21:09 2021
+
+# Variables
+
+# 'override' directive
+GNUMAKEFLAGS := 
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# makefile (from 'Makefile', line 20)
+IMGUI_FILE_DIALOG_DIR = lib/ImGuiFileDialog
+# environment
+PAPERSIZE = letter
+# environment
+DESKTOP_SESSION = LXDE
+# environment
+FD_XDMCP_IF = 
+# default
+.SHELLFLAGS := -c
+# environment
+XDG_SESSION_CLASS = user
+# environment
+XDG_SESSION_TYPE = x11
+# environment
+VSCODE_LOG_NATIVE = false
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# environment
+FD_XSRV = 
+# environment
+COLUMNS = 80
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# environment
+XAUTHORITY = /run/user/1000/gdm/Xauthority
+# environment
+GDMSESSION = awesome
+# environment
+XMODIFIERS = @im=uim
+# makefile
+CURDIR := /home/donghee/src/github.com/donghee/gui_dim
+# makefile
+SHELL = /bin/sh
+# environment
+VTE_VERSION = 6003
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en-us","availableLanguages":{},"_languagePackSupport":true}
+# environment
+_ = /usr/bin/code
+# makefile (from 'Makefile', line 54)
+CFLAGS = $(CXXFLAGS)
+# environment
+XDG_CONFIG_DIRS = /etc/xdg/xdg-awesome:/etc/xdg
+# makefile (from 'Makefile', line 1)
+MAKEFILE_LIST :=  Makefile
+# automatic
+@F = $(notdir $@)
+# environment
+RFB_CLIENT_COUNT = 1
+# environment
+USERNAME = donghee
+# makefile (from 'Makefile', line 25)
+SOURCES = main.cpp $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp $(IMGUI_FILE_DIALOG_DIR)/ImGuiFileDialog.cpp
+# environment
+FD_OPTS = 
+# makefile (from 'Makefile', line 53)
+CXXFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(IMGUI_FILE_DIALOG_DIR) -I$(ICON_FONT_DIR) -g -Wall -Wformat `sdl2-config --cflags`
+# environment
+MAKELEVEL := 0
+# environment
+XDG_DATA_DIRS = /usr/local/share:/usr/share:/usr/share/gdm:/var/lib/menu-xdg:/usr/share/awesome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop
+# environment
+DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
+# environment
+VSCODE_VERBOSE_LOGGING = true
+# environment
+CREATE_DISPLAY_PERL_SETPGRP = 1
+# environment
+LC_CTYPE = C
+# makefile (from 'Makefile', line 19)
+IMGUI_DIR = lib/imgui
+# environment
+FD_SMB = 
+# environment
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-ed47a1d7-2060-4d6d-94e3-fbb62e52492e.sock
+# environment
+LC_NAME = en_US.UTF-8
+# environment
+VSCODE_CWD = /home/donghee/bin
+# environment
+FD_EXTRA = 
+# default
+MAKE_HOST := x86_64-pc-linux-gnu
+# environment
+PATH = /home/donghee/prog/gcc-arm-none-eabi-6-2017-q2-update/bin:/home/donghee/.cargo/bin:/home/donghee/bin:/home/donghee/.local/bin:/usr/local/share/python:/usr/local/bin:/home/donghee/work/js/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/X11R6/bin:/usr/bin/X11:/usr/openwin/bin:/usr/dt/bin:/opt/kde4/bin:/opt/kde3/bin:/opt/gnome/bin:/usr/bin:/bin:/usr/sfw/bin:/usr/local/bin
+# environment
+FD_GEOM = 1920x1440x16
+# environment
+_LXSESSION_PID = 526058
+# environment
+GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
+# environment
+LSCOLORS = Gxfxcxdxbxegedabagacad
+# environment
+XDG_RUNTIME_DIR = /run/user/1000
+# environment
+X11VNC_PROG = x11vnc
+# environment
+RFB_CLIENT_IP = 127.0.0.1
+# makefile (from 'Makefile', line 50)
+ECHO_MESSAGE = "Linux"
+# environment
+RFB_STATE = SECURITY_TYPE
+# environment
+LC_MESSAGES = C
+# environment
+KICAD_PATH = /usr/share/kicad
+# environment
+XDG_MENU_PREFIX = lxde-
+# environment
+VSCODE_LOG_STACK = false
+# environment
+VSCODE_CRASH_REPORTER_START_OPTIONS = {"companyName":"Microsoft","productName":"VSCode","submitURL":"appcenter://code?aid=fba07a4d-84bd-4fc8-a125-9640fc8ce171&uid=d1510044-047f-4c55-aa77-4d46c8c06a33&iid=d1510044-047f-4c55-aa77-4d46c8c06a33&sid=d1510044-047f-4c55-aa77-4d46c8c06a33","uploadToServer":true}
+# environment
+RFB_CLIENT_ID = 0x1
+# default
+.FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
+# environment
+ELECTRON_NO_ATTACH_CONSOLE = 1
+# environment
+LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+# environment
+XDG_SESSION_DESKTOP = awesome
+# environment
+SSH_AUTH_SOCK = /tmp/ssh-LOABS4wZ9sVC/agent.190644
+# automatic
+%F = $(notdir $%)
+# makefile (from 'Makefile', line 27)
+UNAME_S := Linux
+# environment
+LIBXCB_ALLOW_SLOPPY_LOCK = 1
+# environment
+DISPLAY = :20.0
+# environment
+RFB_X11VNC_PID = 525577
+# environment
+RFB_CLIENT_PORT = 52866
+# environment
+TMUX_PANE = %1
+# environment
+GTK_IM_MODULE = fcitx
+# environment
+VSCODE_PIPE_LOGGING = true
+# makefile (from 'Makefile', line 26)
+OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
+# environment
+PWD = /home/donghee/src/github.com/donghee/gui_dim
+# default
+.LOADED := 
+# environment
+XDG_SEAT = seat0
+# makefile (from 'Makefile', line 28)
+LINUX_GL_LIBS = -lGL
+# environment
+SSH_AGENT_PID = 190713
+# environment
+X11VNC_CREATE_GEOM = 1920x1440x16
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = LXDE
+# environment
+GTK_MODULES = /usr/lib32/gtk-2.0/modules/libgail.so:/usr/lib32/gtk-2.0/modules/libatk-bridge.so:gail:atk-bridge
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/services/extensions/node/extensionHostProcess
+# environment
+HOME = /home/donghee
+# environment
+VSCODE_CLI = 1
+# environment
+VSCODE_CODE_CACHE_PATH = /home/donghee/.config/Code/CachedData/83bd43bc519d15e50c4272c6cf5c1479df196a4d
+# environment
+RFB_SSL_CLIENT_CERT = 
+# environment
+LOGNAME = donghee
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+# automatic
++F = $(notdir $+)
+# environment
+RFB_USERNAME = unknown-user
+# environment
+ZSH = /home/donghee/.oh-my-zsh
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# default
+MAKE_VERSION := 4.2.1
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# environment
+XDG_VTNR = 2
+# environment
+LC_TIME = en_US.UTF-8
+# environment
+COLORTERM = truecolor
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+QT_IM_MODULE = uim
+# environment
+SHLVL = 5
+# makefile (from 'Makefile', line 21)
+ICON_FONT_DIR = lib/IconFontCppHeaders
+# environment
+XDG_SESSION_ID = 37
+# environment
+USER = donghee
+# environment
+LC_MONETARY = en_US.UTF-8
+# makefile
+.DEFAULT_GOAL := all
+# environment
+XDG_CURRENT_DESKTOP = LXDE
+# environment
+RFB_CURRENT_TIME = 1632023614
+# environment
+FD_PROG = /usr/bin/lxsession
+# environment
+LESS = -R
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# environment
+LC_TELEPHONE = en_US.UTF-8
+# environment
+X11VNC_GOT_RFBPORT_VAL = -1
+# default
+MAKE_COMMAND := make
+# environment
+OLDPWD = /home/donghee/bin
+# default
+.VARIABLES := 
+# automatic
+*F = $(notdir $*)
+# environment
+LANGUAGE = en
+# environment
+FD_SESS = 
+# environment
+VSCODE_IPC_HOOK = /run/user/1000/vscode-93809105-1.60.1-main.sock
+# environment
+RFB_LOGIN_VIEWONLY = -1
+# makefile
+MAKEFLAGS = pqrR
+# environment
+FD_CUPS = 
+# environment
+MFLAGS = -pqrR
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# environment
+LINGUAS = C
+# environment
+BREAKPAD_DUMP_LOCATION = /home/donghee/.config/Code/exthost Crash Reports
+# environment
+RFB_LOGIN_TIME = 1632023614
+# environment
+RFB_SERVER_IP = 127.0.0.1
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# environment
+TMUX = /tmp//tmux-1000/default,328039,0
+# environment
+GDK_BACKEND = x11
+# environment
+LC_PAPER = en_US.UTF-8
+# environment
+QT_ACCESSIBILITY = 1
+# 'override' directive
+.SHELLSTATUS := 0
+# default
+MAKEFILES := 
+# environment
+LC_NUMERIC = en_US.UTF-8
+# automatic
+<F = $(notdir $<)
+# environment
+RFB_MODE = env
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# environment
+FD_NAS = 
+# environment
+LC_MEASUREMENT = en_US.UTF-8
+# environment
+XDG_CONFIG_HOME = /home/donghee/.config
+# environment
+ 
+PAGER = less
+# environment
+RFB_SERVER_PORT = 5900
+# environment
+LC_ALL = C
+# environment
+_JAVA_AWT_WM_NONREPARENTING = 1
+# makefile (from 'Makefile', line 51)
+LIBS =  $(LINUX_GL_LIBS) -ldl `sdl2-config --libs`
+# environment
+GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/e028360c_a486_42cd_8c9e_5e458d25f1e5
+# automatic
+^F = $(notdir $^)
+# environment
+GNOME_TERMINAL_SERVICE = :1.120
+# default
+SUFFIXES := 
+# environment
+KIGITHUB = https://github.com/KiCad
+# environment
+CHROME_DESKTOP = code-url-handler.desktop
+# environment
+WINDOWPATH = 2
+# default
+.INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
+# environment
+LC_IDENTIFICATION = en_US.UTF-8
+# environment
+FD_TAG = 
+# default
+.RECIPEPREFIX := 
+# makefile (from 'Makefile', line 17)
+EXE = dim_log_view
+# environment
+LC_ADDRESS = en_US.UTF-8
+# environment
+FD_XDUMMY_RUN_AS_ROOT = 
+# environment
+FD_ESD = 
+# environment
+LANG = C
+# environment
+TERM = xterm-256color
+# environment
+VSCODE_PID = 536794
+# variable set hash-table stats:
+# Load=169/1024=17%, Rehash=0, Collisions=37/236=16%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 66305, inode 2637554): 25 files, no impossibilities.
+# lib/imgui/backends (device 66305, inode 4730619): No files, no impossibilities so far.
+# lib/imgui (device 66305, inode 4730556): No files, no impossibilities so far.
+# lib/ImGuiFileDialog (device 66305, inode 2764335): No files, no impossibilities so far.
+
+# 25 files, no impossibilities in 4 directories.
+
+# Implicit Rules
+
+%.o: %.cpp
+#  recipe to execute (from 'Makefile', line 80):
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o: lib/imgui/%.cpp
+#  recipe to execute (from 'Makefile', line 83):
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o: lib/imgui/backends/%.cpp
+#  recipe to execute (from 'Makefile', line 86):
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o: lib/ImGuiFileDialog/%.cpp
+#  recipe to execute (from 'Makefile', line 89):
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+# 4 implicit rules, 0 (0.0%) terminal.
+
+# Files
+
+# Not a target:
+ImGuiFileDialog.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+imgui_demo.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+all: dim_log_view
+#  Command line target.
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/9=0%
+#  recipe to execute (from 'Makefile', line 92):
+	@echo Build complete for $(ECHO_MESSAGE)
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2021-09-08 23:00:18.682143241
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+main.cpp:
+#  Implicit rule search has been done.
+#  Last modified 2021-09-13 13:44:44.157843503
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+imgui.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+imgui_impl_sdl.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+imgui_impl_opengl3.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+imgui_widgets.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+imgui_draw.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+clean:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 98):
+	rm -f $(EXE) $(OBJS)
+
+# Not a target:
+imgui_tables.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+main.o: main.cpp
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'main'
+#  Last modified 2021-09-11 16:52:13.212356748
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# automatic
+# @ := main.o
+# automatic
+# % := 
+# automatic
+# * := main
+# automatic
+# + := main.cpp
+# automatic
+# | := 
+# automatic
+# < := main.cpp
+# automatic
+# ^ := main.cpp
+# automatic
+# ? := main.cpp
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=1/19=5%
+#  recipe to execute (from 'Makefile', line 80):
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+dim_log_view: main.o imgui.o imgui_demo.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o ImGuiFileDialog.o
+#  Implicit rule search has not been done.
+#  Last modified 2021-09-11 16:52:13.332359699
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/9=0%
+#  recipe to execute (from 'Makefile', line 95):
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
+
+# files hash-table stats:
+# Load=16/1024=2%, Rehash=0, Collisions=2/41=5%
+# VPATH Search Paths
+
+# No 'vpath' search paths.
+
+# No general ('VPATH' variable) search path.
+
+# strcache buffers: 1 (0) / strings = 40 / storage = 467 B / avg = 11 B
+# current buf: size = 8162 B / used = 467 B / count = 40 / avg = 11 B
+
+# strcache performance: lookups = 64 / hit rate = 37%
+# hash-table stats:
+# Load=40/8192=0%, Rehash=0, Collisions=1/64=2%
+# Finished Make data base on Sun Sep 19 13:21:09 2021
+
+ 

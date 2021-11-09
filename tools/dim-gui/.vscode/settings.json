@@ -1,0 +1,13 @@
+{
+    "makefile.extensionOutputFolder": "./.vscode",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/donghee/src/github.com/donghee/gui_dim",
+            "binaryPath": "/home/donghee/src/github.com/donghee/gui_dim/dim_log_view",
+            "binaryArgs": []
+        }
+    ],
+    "files.associations": {
+        "iostream": "cpp"
+    }
+}

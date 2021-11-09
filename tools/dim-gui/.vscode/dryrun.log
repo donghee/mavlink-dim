@@ -1,0 +1,15 @@
+make all --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/donghee/src/github.com/donghee/gui_dim'
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o main.o main.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o imgui.o lib/imgui/imgui.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o imgui_demo.o lib/imgui/imgui_demo.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o imgui_draw.o lib/imgui/imgui_draw.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o imgui_tables.o lib/imgui/imgui_tables.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o imgui_widgets.o lib/imgui/imgui_widgets.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o imgui_impl_sdl.o lib/imgui/backends/imgui_impl_sdl.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o imgui_impl_opengl3.o lib/imgui/backends/imgui_impl_opengl3.cpp
+g++ -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags` -c -o ImGuiFileDialog.o lib/ImGuiFileDialog/ImGuiFileDialog.cpp
+g++ -o dim_log_view main.o imgui.o imgui_demo.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o ImGuiFileDialog.o -Ilib/imgui -Ilib/imgui/backends -Ilib/ImGuiFileDialog -Ilib/IconFontCppHeaders -g -Wall -Wformat `sdl2-config --cflags`  -lGL -ldl `sdl2-config --libs`
+echo Build complete for "Linux"
+make: Leaving directory '/home/donghee/src/github.com/donghee/gui_dim'
+ 
