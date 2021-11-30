@@ -38,9 +38,9 @@ format:
 
 doxygen:
 	doxygen Doxyfile
-	#./node_modules/.bin/moxygen --anchors --output doc/api.md doc/xml/
-	./node_modules/.bin/moxygen -h -t doc/templates/cpp --output doc/api.md doc/xml/
-	# pandoc -f markdown -t org -o api.org api.md
+	npx moxygen -h -t doc/templates/cpp --output doc/api.md doc/xml/
+	# fix internal link space
+	sed 's/`\[/` \[/' doc/api.md > ~/mnt/cron/Dropbox/docs/projects/dim-2021/mavlink-dim-api.md
 
 watch_doxygen:
 	watch_ian src/* - 'make doxygen && scp doc/api.md donghee@192.168.88.25:~/Dropbox/docs/log/dim-uav-gcs_code.md'
