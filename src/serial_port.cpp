@@ -130,68 +130,70 @@ read_message(mavlink_message_t &message)
   // --------------------------------------------------------------------------
 
   fds.revents = 0;
-  fcntl(fd, F_SETFL, flags|O_NONBLOCK);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
   if (poll(&fds, 1, 100) == 0) {
-	  return false;
+    return false;
   }
+
   fcntl(fd, F_SETFL, flags);
 
   if (fds.revents & POLLIN) {
 
-  // this function locks the port during read
-  int result = _read_port(cp);
+    // this function locks the port during read
+    int result = _read_port(cp);
 
-  // --------------------------------------------------------------------------
-  //   PARSE MESSAGE
-  // --------------------------------------------------------------------------
-  if (result > 0) {
-    // the parsing
-    msgReceived = mavlink_parse_char(MAVLINK_COMM_1, cp, &message, &status);
+    // --------------------------------------------------------------------------
+    //   PARSE MESSAGE
+    // --------------------------------------------------------------------------
+    if (result > 0) {
+      // the parsing
+      msgReceived = mavlink_parse_char(MAVLINK_COMM_1, cp, &message, &status);
 
-    // check for dropped packets
-    if ((lastStatus.packet_rx_drop_count != status.packet_rx_drop_count) && debug) {
-      printf("ERROR: DROPPED %d PACKETS\n", status.packet_rx_drop_count);
-      unsigned char v = cp;
-      fprintf(stderr, "%02x ", v);
-    }
-
-    lastStatus = status;
-  }
-
-  // Couldn't read from port
-  else {
-    fprintf(stderr, "ERROR: Could not read from fd %d\n", fd);
-  }
-
-  // --------------------------------------------------------------------------
-  //   DEBUGGING REPORTS
-  // --------------------------------------------------------------------------
-  if (msgReceived && debug) {
-    // Report info
-    printf("Received message from serial with ID #%d (sys:%d|comp:%d):\n", message.msgid, message.sysid, message.compid);
-
-    fprintf(stderr, "Received serial data: ");
-    unsigned int i;
-    uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
-
-    // check message is write length
-    unsigned int messageLength = mavlink_msg_to_send_buffer(buffer, &message);
-
-    // message length error
-    if (messageLength > MAVLINK_MAX_PACKET_LEN) {
-      fprintf(stderr, "\nFATAL ERROR: MESSAGE LENGTH IS LARGER THAN BUFFER SIZE\n");
-    }
-
-    // print out the buffer
-    else {
-      for (i = 0; i < messageLength; i++) {
-        unsigned char v = buffer[i];
+      // check for dropped packets
+      if ((lastStatus.packet_rx_drop_count != status.packet_rx_drop_count) && debug) {
+        printf("ERROR: DROPPED %d PACKETS\n", status.packet_rx_drop_count);
+        unsigned char v = cp;
         fprintf(stderr, "%02x ", v);
       }
 
-      fprintf(stderr, "\n");
+      lastStatus = status;
     }
-  }
+
+    // Couldn't read from port
+    else {
+      fprintf(stderr, "ERROR: Could not read from fd %d\n", fd);
+    }
+
+    // --------------------------------------------------------------------------
+    //   DEBUGGING REPORTS
+    // --------------------------------------------------------------------------
+    if (msgReceived && debug) {
+      // Report info
+      printf("Received message from serial with ID #%d (sys:%d|comp:%d):\n", message.msgid, message.sysid, message.compid);
+
+      fprintf(stderr, "Received serial data: ");
+      unsigned int i;
+      uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+
+      // check message is write length
+      unsigned int messageLength = mavlink_msg_to_send_buffer(buffer, &message);
+
+      // message length error
+      if (messageLength > MAVLINK_MAX_PACKET_LEN) {
+        fprintf(stderr, "\nFATAL ERROR: MESSAGE LENGTH IS LARGER THAN BUFFER SIZE\n");
+      }
+
+      // print out the buffer
+      else {
+        for (i = 0; i < messageLength; i++) {
+          unsigned char v = buffer[i];
+          fprintf(stderr, "%02x ", v);
+        }
+
+        fprintf(stderr, "\n");
+      }
+    }
 
   }
 

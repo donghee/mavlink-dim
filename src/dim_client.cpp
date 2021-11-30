@@ -19,7 +19,7 @@ void DimClient::open(const char *ip, uint16_t port)
 
   _handshake_type = KSETLS_FULL_HANDSHAKE;
 
-    // Client
+  // Client
   if (connect() == -1) {
     close(); // TODO
   }

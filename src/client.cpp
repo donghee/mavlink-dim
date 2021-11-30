@@ -144,8 +144,7 @@ MAVLinkTlsClient::gcs_write_message()
 
   // Fully-blocking
   // q_to_gcs.wait_dequeue(message);
-  if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(5)))
-  {
+  if (q_to_gcs.wait_dequeue_timed(message, std::chrono::milliseconds(5))) {
     printf("Received message from fc with ID #%d (sys:%d|comp:%d):\r\n", message.msgid, message.sysid, message.compid);
     send_size = mavlink_msg_to_send_buffer((uint8_t *)send_buffer, &message);
     // debug
@@ -254,12 +253,13 @@ MAVLinkTlsClient::start_autopilot_read_write_thread(void *args)
   return NULL;
 }
 
-typedef void * (*THREADFUNCPTR)(void *);
+typedef void *(*THREADFUNCPTR)(void *);
 
 pthread_t autopilot_read_write_tid, gcs_write_tid, gcs_read_tid;
 
 int
-start_client_threads(MAVLinkTlsClient *client) {
+start_client_threads(MAVLinkTlsClient *client)
+{
   int result;
 
   result = pthread_create(&gcs_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_gcs_write_thread, client);
@@ -270,7 +270,8 @@ start_client_threads(MAVLinkTlsClient *client) {
 
   if (result) { return result; }
 
-  result = pthread_create(&autopilot_read_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsClient::start_autopilot_read_write_thread, client);
+  result = pthread_create(&autopilot_read_write_tid, NULL,
+                          (THREADFUNCPTR) &MAVLinkTlsClient::start_autopilot_read_write_thread, client);
 
   if (result) { return result; }
 
@@ -283,7 +284,8 @@ start_client_threads(MAVLinkTlsClient *client) {
 }
 
 int
-wait_client_threads() {
+wait_client_threads()
+{
   pthread_join(gcs_write_tid, NULL);
   pthread_join(gcs_read_tid, NULL);
   pthread_join(autopilot_read_write_tid, NULL);
@@ -292,7 +294,8 @@ wait_client_threads() {
 }
 
 
-int init_commander(int& commander_sock, int port) {
+int init_commander(int &commander_sock, int port)
+{
   struct sockaddr_in commanderAddr;
 
   commander_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -329,7 +332,8 @@ int main(int argc, const char *argv[])
   mavlink_out_port = atoi(argv[2]);
   commander_in_port = atoi(argv[3]);
 
-  printf("Running Client <Server IP: %s, MAVLink PORT: %u, Commander PORT: %u>\n", dim_tls_server_ip, mavlink_out_port, commander_in_port);
+  printf("Running Client <Server IP: %s, MAVLink PORT: %u, Commander PORT: %u>\n", dim_tls_server_ip, mavlink_out_port,
+         commander_in_port);
 
   init_commander(commander_sock, commander_in_port);
   struct sockaddr_in commanderClientAddr;
@@ -357,10 +361,12 @@ int main(int argc, const char *argv[])
 
   while (1) {
     sleep(1);
-    if ((received = recvfrom(commander_sock, commander_buffer, 512, 0, (struct sockaddr *)&commanderClientAddr, &commanderClientAddrLen)) != -1) {
+
+    if ((received = recvfrom(commander_sock, commander_buffer, 512, 0, (struct sockaddr *)&commanderClientAddr,
+                             &commanderClientAddrLen)) != -1) {
       if (received > 4) {
         printf("Received command: %s", commander_buffer);
-        char * command = new char[4]();
+        char *command = new char[4]();
         memcpy(command, &commander_buffer[0], 4);
 
         if (strncmp(command, "start", 4) == 0) { // connect
@@ -371,12 +377,14 @@ int main(int argc, const char *argv[])
           dim->open(dim_tls_server_ip, 4433);
           start_client_threads(client);
         }
+
         if (strncmp(command, "stop", 4) == 0) { // disconnect
           client->run = 0;
           wait_client_threads();
 
           dim->close();
         }
+
         if (strncmp(command, "auth", 4) == 0) { // auth
           client->run = 0;
           wait_client_threads();
@@ -385,17 +393,18 @@ int main(int argc, const char *argv[])
           memcpy(auth_key, &commander_buffer[5], received - 5);
           printf("auth key: %s", auth_key);
         }
+
         if (strncmp(command, "decrypt", 4) == 0) { // decrypt
           client->run = 0;
           wait_client_threads();
 
           printf("\r\ncommander_buffer: received: %d\r\n", received);
-          uint8_t buffer [256+16+128+16];
+          uint8_t buffer [256 + 16 + 128 + 16];
           uint8_t plaintext [256];
           memcpy(buffer, &commander_buffer[8], received - 8);
 
           printf("dim->decrypt() \r\n");
-          dim->decrypt(1, 1, (const char*)buffer, 256+16+128+16, plaintext);
+          dim->decrypt(1, 1, (const char *)buffer, 256 + 16 + 128 + 16, plaintext);
 
           sendto(commander_sock, plaintext, 256, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
         }
@@ -418,7 +427,7 @@ int main(int argc, const char *argv[])
 
           uint8_t abPubKey0[64] = {0x03, 0x10, 0x81, 0x8A, 0x36, 0xE2, 0xCB, 0x32, 0x0A, 0xFD, 0x92, 0xEC, 0xE3, 0x52, 0x3D, 0x1A};
 
-          dim->set_key((const uint8_t*)abPubKey0, sizeof(abPubKey0)/sizeof(uint8_t));
+          dim->set_key((const uint8_t *)abPubKey0, sizeof(abPubKey0) / sizeof(uint8_t));
 
           int i;
           int16_t sRv;
@@ -428,48 +437,52 @@ int main(int argc, const char *argv[])
 
           // IV
           sRv = dim->generate_random(abIv, 16);
-          if (sRv != 0)
-          {
+
+          if (sRv != 0) {
             printf("IV : Fail(-0x%04X)\r\n", -sRv);
           }
 
           // Auth
           sRv = dim->generate_random(abAuth, 128);
-          if (sRv != 0)
-          {
+
+          if (sRv != 0) {
             printf("Auth : Fail(-0x%04X)\r\n", -sRv);
           }
 
           // Plaintext
           printf("  * Plain Data :\r\n    ");
-          for (i = 0; i < 256; i++)
-          {
-            abData[i]= (uint8_t)plaintext[i];
+
+          for (i = 0; i < 256; i++) {
+            abData[i] = (uint8_t)plaintext[i];
             //abData[i]= 0xaa;
             printf("%02X", abData[i]);
-            if ((i < 255) && ((i + 1) % 32 == 0))
+
+            if ((i < 255) && ((i + 1) % 32 == 0)) {
               printf("\r\n    ");
+            }
           }
 
           printf("\r\ndim->encrypt() \r\n");
           dim->encrypt(abData, 256, abIv, 16, abAuth, 128, abData1, abTag, 16);
 
-          uint8_t result [256+16+128+16];
+          uint8_t result [256 + 16 + 128 + 16];
           memcpy(result, &abData1[0], 256);
-          memcpy(result+256, &abIv[0], 16);
-          memcpy(result+256+16, &abAuth[0], 128);
-          memcpy(result+256+16+128, &abTag[0], 16);
+          memcpy(result + 256, &abIv[0], 16);
+          memcpy(result + 256 + 16, &abAuth[0], 128);
+          memcpy(result + 256 + 16 + 128, &abTag[0], 16);
 
           printf("  * Result Data :\r\n    ");
-          for (i = 0; i < 256+16+128+16; i++)
-          {
+
+          for (i = 0; i < 256 + 16 + 128 + 16; i++) {
             printf("%02X", result[i]);
-            if ((i < 512) && ((i + 1) % 32 == 0))
+
+            if ((i < 512) && ((i + 1) % 32 == 0)) {
               printf("\r\n    ");
+            }
           }
 
           // send UDP socket
-          sendto(commander_sock, result, 256+16+128+16, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+          sendto(commander_sock, result, 256 + 16 + 128 + 16, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
         }
       }
     }

@@ -50,24 +50,24 @@ MAVLinkTlsServer::autopilot_read_message()
 
     if (result > 0) {
       if (
-              //message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
-              //message.msgid == MAVLINK_MSG_ID_ALTITUDE ||
-              message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
-              message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
-              message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
-              message.msgid == MAVLINK_MSG_ID_SERVO_OUTPUT_RAW ||
-              message.msgid == MAVLINK_MSG_ID_HIGHRES_IMU ||
-              message.msgid == MAVLINK_MSG_ID_TIMESYNC ||
-              message.msgid == MAVLINK_MSG_ID_VFR_HUD ||
-              message.msgid == MAVLINK_MSG_ID_VIBRATION ||
-              message.msgid == MAVLINK_MSG_ID_ESTIMATOR_STATUS ||
-              message.msgid == MAVLINK_MSG_ID_SCALED_IMU ||
-              message.msgid == MAVLINK_MSG_ID_SCALED_IMU2 ||
-              message.msgid == MAVLINK_MSG_ID_ACTUATOR_CONTROL_TARGET ||
-              message.msgid == MAVLINK_MSG_ID_ODOMETRY ||
-              message.msgid == MAVLINK_MSG_ID_EXTENDED_SYS_STATE ||
-              message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS
-          ) {
+        //message.msgid == MAVLINK_MSG_ID_ATTITUDE ||
+        //message.msgid == MAVLINK_MSG_ID_ALTITUDE ||
+        message.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
+        message.msgid == MAVLINK_MSG_ID_ATTITUDE_TARGET ||
+        message.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
+        message.msgid == MAVLINK_MSG_ID_SERVO_OUTPUT_RAW ||
+        message.msgid == MAVLINK_MSG_ID_HIGHRES_IMU ||
+        message.msgid == MAVLINK_MSG_ID_TIMESYNC ||
+        message.msgid == MAVLINK_MSG_ID_VFR_HUD ||
+        message.msgid == MAVLINK_MSG_ID_VIBRATION ||
+        message.msgid == MAVLINK_MSG_ID_ESTIMATOR_STATUS ||
+        message.msgid == MAVLINK_MSG_ID_SCALED_IMU ||
+        message.msgid == MAVLINK_MSG_ID_SCALED_IMU2 ||
+        message.msgid == MAVLINK_MSG_ID_ACTUATOR_CONTROL_TARGET ||
+        message.msgid == MAVLINK_MSG_ID_ODOMETRY ||
+        message.msgid == MAVLINK_MSG_ID_EXTENDED_SYS_STATE ||
+        message.msgid == MAVLINK_MSG_ID_BATTERY_STATUS
+      ) {
         continue;
       }
 
@@ -77,32 +77,36 @@ MAVLinkTlsServer::autopilot_read_message()
 
         // printf("encapsulated_data %d\n", encapsulated_data.seqnr);
         if (encapsulated_data.seqnr < 2) { // 0,1
-          for(int i = 0 ; i < 128; i++) {
+          for (int i = 0 ; i < 128; i++) {
             // printf("%02X", encapsulated_data.data[i]);
-            encrypted_text[i+(128*encapsulated_data.seqnr)] = encapsulated_data.data[i];
+            encrypted_text[i + (128 * encapsulated_data.seqnr)] = encapsulated_data.data[i];
           }
+
         } else { // 2
           uint8_t plain_text[256], abIv[16], abAuth[128], abTag[16];
 
-          for(int i = 0 ; i < 16; i++) {
+          for (int i = 0 ; i < 16; i++) {
             // printf("%02X", encapsulated_data.data[i]);
             abIv[i] = encapsulated_data.data[i];
             // printf("%02X", abIv[i]);
           }
+
           // printf("\n");
 
-          for(int i = 0 ; i < 128; i++) {
+          for (int i = 0 ; i < 128; i++) {
             // printf("%02X", encapsulated_data.data[i]);
-            abAuth[i] = encapsulated_data.data[16+i];
+            abAuth[i] = encapsulated_data.data[16 + i];
             // printf("%02X", abAuth[i]);
           }
+
           // printf("\n");
 
-          for(int i = 0 ; i < 16; i++) {
+          for (int i = 0 ; i < 16; i++) {
             // printf("%02X", encapsulated_data.data[i]);
-            abTag[i] = encapsulated_data.data[16+128+i];
+            abTag[i] = encapsulated_data.data[16 + 128 + i];
             // printf("%02X", abTag[i]);
           }
+
           printf("\n");
           printf("  * Received Encrypted Data using MAVLink from FC \r\n    ");
 
@@ -113,12 +117,14 @@ MAVLinkTlsServer::autopilot_read_message()
               printf("\r\n    ");
             }
           }
+
           printf("\r\n");
           printf("  * Decrypted Plain: MAVLink #33 message from FC \r\n    ");
           // ARIA (0x50) Decrypt
           memset(&plain_text, 0, sizeof(plain_text));
           int ret;
-          ret = _kcmvpAriaGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,abAuth, 128, abTag, 16, DECRYPT);
+          ret = _kcmvpAriaGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16, abAuth, 128, abTag, 16, DECRYPT);
+
           // printf("kcmvpAriaGcm: %d    \n", ret);
           // printf("    ");
           for (int i = 0; i < 256; i++) {
@@ -128,6 +134,7 @@ MAVLinkTlsServer::autopilot_read_message()
               printf("\r\n    ");
             }
           }
+
           printf("\n");
           // get key 0
           // uint8_t abPubKey0[64];
@@ -383,7 +390,7 @@ MAVLinkTlsServer::start_gcs_read_thread(void *args)
           result = dim->tls_close_notify();
           //printf("\r\nresult: %d\r\n", result);
           //if (result == 0)
-		  //dim->tls_close();
+          //dim->tls_close();
           //usleep(500000); // 0.5s
           dim->close();
           break;
@@ -436,7 +443,7 @@ MAVLinkTlsServer::start_autopilot_write_thread(void *args)
   return NULL;
 }
 
-typedef void * (*THREADFUNCPTR)(void *);
+typedef void *(*THREADFUNCPTR)(void *);
 
 pthread_t autopilot_read_tid, gcs_read_tid, gcs_write_tid, autopilot_write_tid;
 
@@ -446,7 +453,8 @@ start_server_threads(MAVLinkTlsServer *server)
   int result;
 
   //result = pthread_create(&autopilot_read_tid, NULL, &start_autopilot_read_thread, (char *)"Autopilot Reading");
-  result = pthread_create(&autopilot_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_read_thread, server);
+  result = pthread_create(&autopilot_read_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_read_thread,
+                          server);
 
   if (result) { return result; }
 
@@ -458,7 +466,8 @@ start_server_threads(MAVLinkTlsServer *server)
 
   if (result) { return result; }
 
-  result = pthread_create(&autopilot_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_write_thread, server);
+  result = pthread_create(&autopilot_write_tid, NULL, (THREADFUNCPTR) &MAVLinkTlsServer::start_autopilot_write_thread,
+                          server);
 
   if (result) { return result; }
 
@@ -466,7 +475,8 @@ start_server_threads(MAVLinkTlsServer *server)
 }
 
 int
-wait_server_threads() {
+wait_server_threads()
+{
   pthread_join(gcs_write_tid, NULL);
   pthread_join(gcs_read_tid, NULL);
   pthread_join(autopilot_write_tid, NULL);
@@ -475,7 +485,8 @@ wait_server_threads() {
   return NULL;
 }
 
-int init_commander(int& commander_sock) {
+int init_commander(int &commander_sock)
+{
   struct sockaddr_in commanderAddr;
 
   commander_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -505,7 +516,7 @@ int main(int argc, const char *argv[])
   int received = 0;
   bool is_authentication = false;
 
-  if (argc !=3) {
+  if (argc != 3) {
     fprintf(stderr, "Usage: %s /dev/ttyTHS1 921600\n", argv[0]);
     exit(EXIT_FAILURE);
   }
@@ -529,10 +540,12 @@ int main(int argc, const char *argv[])
 
   while (1) {
     sleep(1);
-    if ((received = recvfrom(commander_sock, commander_buffer, 512, 0, (struct sockaddr *)&commanderClientAddr, &commanderClientAddrLen)) != -1) {
+
+    if ((received = recvfrom(commander_sock, commander_buffer, 512, 0, (struct sockaddr *)&commanderClientAddr,
+                             &commanderClientAddrLen)) != -1) {
       if (received > 4) {
         printf("Received command: %s\n", commander_buffer);
-        char * command = new char[4]();
+        char *command = new char[4]();
         memcpy(command, &commander_buffer[0], 4);
 
         // receive encrypted data from fc with ENCAPSULATED DATA message
@@ -553,39 +566,46 @@ int main(int argc, const char *argv[])
           if (port) {
             //port->write_message(message);
             usleep(100);
-            while(1) {
+
+            while (1) {
               if (port->read_message(message) > 0) {
                 if (message.msgid == MAVLINK_MSG_ID_ENCAPSULATED_DATA) {
                   mavlink_encapsulated_data_t encapsulated_data;
                   mavlink_msg_encapsulated_data_decode(&message, &encapsulated_data);
 
                   if (encapsulated_data.seqnr < 2) { // 0,1
-                    for(int i = 0 ; i < 128; i++) {
-                      encrypted_text[i+(128*encapsulated_data.seqnr)] = encapsulated_data.data[i];
+                    for (int i = 0 ; i < 128; i++) {
+                      encrypted_text[i + (128 * encapsulated_data.seqnr)] = encapsulated_data.data[i];
                     }
+
                     // memcpy(&encrypted_text[128*encapsulated_data.seqnr], &encapsulated_data.data[0], 128);
+
                   } else { // 2
                     uint8_t plain_text[256], abIv[16], abAuth[128], abTag[16];
 
-                    for(int i = 0 ; i < 16; i++) {
+                    for (int i = 0 ; i < 16; i++) {
                       abIv[i] = encapsulated_data.data[i];
                     }
 
-                    for(int i = 0 ; i < 128; i++) {
-                      abAuth[i] = encapsulated_data.data[16+i];
+                    for (int i = 0 ; i < 128; i++) {
+                      abAuth[i] = encapsulated_data.data[16 + i];
                     }
 
-                    for(int i = 0 ; i < 16; i++) {
-                      abTag[i] = encapsulated_data.data[16+128+i];
+                    for (int i = 0 ; i < 16; i++) {
+                      abTag[i] = encapsulated_data.data[16 + 128 + i];
                     }
+
                     printf("\n");
                     printf("  * Received Encrypted Data using MAVLink from FC \r\n    ");
+
                     for (int i = 0; i < 256; i++) {
                       printf("%02X", encrypted_text[i]);
+
                       if ((i < 255) && ((i + 1) % 32 == 0)) {
                         printf("\r\n    ");
                       }
                     }
+
                     printf("\r\n");
                     sendto(commander_sock, encrypted_text, 256, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
                     break;
@@ -607,7 +627,7 @@ int main(int argc, const char *argv[])
           mavlink_message_t message0, message1, message2;
           uint8_t encrypted_text[512];
 
-          mavlink_encapsulated_data_t send_encapsulated_data0, send_encapsulated_data1 ,send_encapsulated_data2;
+          mavlink_encapsulated_data_t send_encapsulated_data0, send_encapsulated_data1, send_encapsulated_data2;
 
           send_encapsulated_data0.seqnr = 0;
           memset(send_encapsulated_data0.data, '\0', 253);
@@ -616,21 +636,21 @@ int main(int argc, const char *argv[])
 
           send_encapsulated_data1.seqnr = 1;
           memset(send_encapsulated_data1.data, '\0', 253);
-          memcpy(send_encapsulated_data1.data, &commander_buffer[5+128], 128);
+          memcpy(send_encapsulated_data1.data, &commander_buffer[5 + 128], 128);
           mavlink_msg_encapsulated_data_encode(1, 1, &message1, &send_encapsulated_data1);
 
           send_encapsulated_data2.seqnr = 2;
           memset(send_encapsulated_data2.data, '\0', 253);
-          memcpy(send_encapsulated_data2.data, &commander_buffer[5+128+128], 16+128+16);
+          memcpy(send_encapsulated_data2.data, &commander_buffer[5 + 128 + 128], 16 + 128 + 16);
           mavlink_msg_encapsulated_data_encode(1, 1, &message2, &send_encapsulated_data2);
 
           if (port) {
-              port->write_message(message0);
-              sleep(1);
-              port->write_message(message1);
-              sleep(1);
-              port->write_message(message2);
-              sleep(1);
+            port->write_message(message0);
+            sleep(1);
+            port->write_message(message1);
+            sleep(1);
+            port->write_message(message2);
+            sleep(1);
           }
 
           port->stop();
@@ -652,28 +672,36 @@ int main(int argc, const char *argv[])
 
           if (port) {
             port->write_message(message);
-            while(1) {
+
+            while (1) {
               if (port->read_message(message) > 0) {
                 if (message.msgid == MAVLINK_MSG_ID_AUTH_KEY) {
                   port->stop();
                   mavlink_auth_key_t ack_auth_key_msg;
                   mavlink_msg_auth_key_decode(&message, &ack_auth_key_msg);
                   printf("AUTH KEY:\n");
-                  for(int i = 0 ; i < 16; i++) {
+
+                  for (int i = 0 ; i < 16; i++) {
                     printf("%02X", ack_auth_key_msg.key[i]);
                   }
+
                   printf("\n");
+
                   if (memcmp(auth_key_msg.key, ack_auth_key_msg.key, 16) == 0) {
                     is_authentication = true;
                     sendto(commander_sock, "Auth key is matched", 19, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+
                   } else {
                     is_authentication = false;
-                    sendto(commander_sock, "Auth key does not match", 23, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+                    sendto(commander_sock, "Auth key does not match", 23, 0, (struct sockaddr *)&commanderClientAddr,
+                           commanderClientAddrLen);
                   }
+
                   break;
                 }
               }
             }
+
             continue;
           }
         }

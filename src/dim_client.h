@@ -5,7 +5,7 @@
 
 /**
  * \class DimClient
- * \brief Provies DIM socket interface for MAVLink TLS Handshake and encryption and decryption using DIM
+ * \brief DIM client interface for MAVLink TLS Handshake with DIM Server and encryption and decryption using DIM
  */
 class DimClient : public DimSocket
 {
