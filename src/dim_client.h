@@ -1,3 +1,17 @@
+/**
+
+
+ * @file dim_client.h
+ 
+*
+ * @brief DIM TLS Client Interface
+ *
+ * DIM TLS Client Interface to connect with DIM TLS Server
+ *
+ * @author Donghee Park,   <dongheepark@gmail.com>
+ *
+ */
+
 #ifndef DIM_CLIENT_H
 #define DIM_CLIENT_H
 

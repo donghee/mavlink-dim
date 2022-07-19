@@ -1,3 +1,18 @@
+/**
+
+
+ * @file dim_server.h
+ 
+*
+ * @brief DIM TLS Server Interface
+ *
+ * DIM TLS Server Interface for MAVLink TLS Handshake and encryption and decryption using DIM
+ *
+ * @author Donghee Park,   <dongheepark@gmail.com>
+ *
+ */
+
+
 #ifndef DIM_SERVER_H
 #define DIM_SERVER_H
 

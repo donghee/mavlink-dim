@@ -1,3 +1,18 @@
+/**
+
+
+ * @file dim.h
+ 
+*
+ * @brief DIM Socket Interface
+ *
+ * DIM Socket Interface for DIM Server and Client
+ *
+ * @author Donghee Park,   <dongheepark@gmail.com>
+ *
+ */
+
+
 #ifndef DIM_H
 #define DIM_H
 
@@ -24,7 +39,7 @@
 
 /**
  * \class DimSocket
- * \brief Provies DIM socket interface for MAVLink TLS Handshake and encryption and decryption using DIM
+ * \brief DIM socket interface for Dim Server and Client
  */
 class DimSocket
 {
