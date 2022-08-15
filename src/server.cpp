@@ -75,7 +75,7 @@ MAVLinkTlsServer::autopilot_read_message()
         mavlink_encapsulated_data_t encapsulated_data;
         mavlink_msg_encapsulated_data_decode(&message, &encapsulated_data);
 
-        // printf("encapsulated_data %d\n", encapsulated_data.seqnr);
+        printf("encapsulated_data %d\n", encapsulated_data.seqnr);
         if (encapsulated_data.seqnr < 2) { // 0,1
           for (int i = 0 ; i < 128; i++) {
             // printf("%02X", encapsulated_data.data[i]);
@@ -549,7 +549,8 @@ int main(int argc, const char *argv[])
         memcpy(command, &commander_buffer[0], 4);
 
         // receive encrypted data from fc with ENCAPSULATED DATA message
-        if (strncmp(command, "receive ", 4) == 0) {
+        if (strncmp(command, "recv ", 4) == 0) {
+          printf("\nWait for encrypted data from fc\n");
           server->run = 0;
           wait_server_threads();
           server->run = 1;
@@ -557,14 +558,10 @@ int main(int argc, const char *argv[])
           port->start();
 
           mavlink_message_t message;
-          uint8_t encrypted_text[256];
-          // mavlink_encapsulated_data_key_t encapsulated_data;
-          // memset(encapsulated_data.key, '\0', 32);
-          // memcpy(encapsulated_data.key, &commander_buffer[5], received - 5);
-          // mavlink_msg_encapsulated_data_encode(1, 1, &message, &encapsulated_data);
+          //cuint8_t encrypted_text[256];
+          uint8_t encrypted_text[256+16+128+16];
 
           if (port) {
-            //port->write_message(message);
             usleep(100);
 
             while (1) {
@@ -585,29 +582,28 @@ int main(int argc, const char *argv[])
 
                     for (int i = 0 ; i < 16; i++) {
                       abIv[i] = encapsulated_data.data[i];
+                      encrypted_text[256+i] = abIv[i];
                     }
 
                     for (int i = 0 ; i < 128; i++) {
                       abAuth[i] = encapsulated_data.data[16 + i];
+                      encrypted_text[256+16+i] = abAuth[i];
                     }
 
                     for (int i = 0 ; i < 16; i++) {
                       abTag[i] = encapsulated_data.data[16 + 128 + i];
+                      encrypted_text[256+16+128+i] = abTag[i];
                     }
 
                     printf("\n");
                     printf("  * Received Encrypted Data using MAVLink from FC \r\n    ");
 
-                    for (int i = 0; i < 256; i++) {
+                    for (int i = 0; i < 256+16+128+16; i++) {
                       printf("%02X", encrypted_text[i]);
-
-                      if ((i < 255) && ((i + 1) % 32 == 0)) {
-                        printf("\r\n    ");
-                      }
                     }
 
                     printf("\r\n");
-                    sendto(commander_sock, encrypted_text, 256, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
+                    sendto(commander_sock, encrypted_text, 256+16+128+16, 0, (struct sockaddr *)&commanderClientAddr, commanderClientAddrLen);
                     break;
                   }
                 }
